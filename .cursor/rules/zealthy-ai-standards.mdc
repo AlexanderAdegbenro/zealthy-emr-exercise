@@ -1,0 +1,28 @@
+---
+description: Brevity and clarity for ADHD/Autism-friendly AI responses; Zealthy color palette
+alwaysApply: true
+---
+
+# Zealthy AI Standards
+
+## Brevity (ADHD/Autism-friendly)
+
+- Keep answers **concise** and implementation-focused.
+- Include explanations only when they clarify important trade-offs.
+- Prefer short, scannable replies; avoid long preambles.
+- Suggest alternatives when relevant (e.g. performance or scalability).
+- Default to modern, secure, maintainable code—no short hacks.
+
+## Zealthy color palette
+
+Use these tokens from `src/theme/colors.js` (Tailwind: e.g. `bg-turquoise_surf-500`, `text-primary_scarlet`):
+
+| Token            | Default hex  | Use |
+|------------------|-------------|-----|
+| turquoise_surf   | `#06aed5`   | Primary accent, links |
+| cerulean         | `#086788`   | Secondary, headers |
+| bright_amber     | `#f0c808`   | Highlights, CTAs |
+| papaya_whip      | `#fff1d0`   | Backgrounds, cards |
+| primary_scarlet  | `#dd1c1a`   | Errors, critical actions |
+
+Each has 100–900 shades; prefer semantic names over raw hex in UI code.

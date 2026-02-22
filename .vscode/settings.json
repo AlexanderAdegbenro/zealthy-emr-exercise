@@ -1,0 +1,52 @@
+{
+  "cSpell.enabledLanguageIds": [
+    "markdown",
+    "plaintext",
+    "typescript",
+    "typescriptreact",
+    "javascript",
+    "javascriptreact",
+    "json",
+    "jsonc",
+    "json5",
+    "yaml",
+    "markdown.markdown"
+  ],
+  "editor.fontFamily": "'IBM Plex Mono', monospace",
+  "editor.fontSize": 14.5,
+  "editor.lineHeight": 1.8,
+  "editor.letterSpacing": 0.4,
+  "editor.fontWeight": "400",
+  "editor.fontLigatures": true,
+  "editor.cursorSmoothCaretAnimation": "on",
+  "editor.cursorBlinking": "expand",
+  "editor.cursorStyle": "line-thin",
+  "editor.minimap.enabled": false,
+  "editor.scrollbar.vertical": "hidden",
+  "editor.scrollbar.horizontal": "hidden",
+  "editor.rulers": [],
+  "editor.guides.indentation": false,
+  "editor.stickyScroll.enabled": true,
+  "editor.renderLineHighlight": "all",
+  "editor.renderWhitespace": "none",
+  "editor.renderControlCharacters": false,
+  "editor.scrollBeyondLastLine": true,
+  "editor.centeredLayout": true,
+  "workbench.iconTheme": "material-icon-theme",
+  "workbench.activityBar.location": "hidden",
+  "workbench.editor.centeredLayout": true,
+  "workbench.panel.defaultLocation": "bottom",
+  "workbench.sideBar.location": "right",
+  "workbench.list.smoothScrolling": true,
+  "workbench.colorCustomizations": {
+    "[Vesper]": {
+      "editor.lineHighlightBackground": "#1a1a1a",
+      "editor.selectionBackground": "#333333",
+      "editorLineNumber.foreground": "#444444",
+      "editorLineNumber.activeForeground": "#ffffff",
+      "editorGroup.border": "#00000000",
+      "sideBar.border": "#00000000",
+      "panel.border": "#00000000"
+    }
+  }
+}
