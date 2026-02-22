@@ -64,7 +64,13 @@ const FormInput = React.forwardRef<TextInput, FormInputProps>(
           {secureTextEntry && (
             <TouchableOpacity 
               onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-              className="absolute right-5"
+              style={{
+                position: "absolute",
+                right: 28,
+                top: 0,
+                bottom: 0,
+                justifyContent: "center",
+              }}
               activeOpacity={0.7}
               hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
             >
@@ -110,8 +116,39 @@ export default function LoginScreen() {
   return (
     <View 
       className="flex-1 bg-papaya_whip-900"
-      style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
+      style={{ paddingBottom: insets.bottom }}
     >
+      {/* Premium cerulean header - matches Directory style */}
+      <View
+        className="bg-cerulean-600 rounded-b-[48px] px-8 pb-12 items-center"
+        style={{
+          paddingTop: insets.top + 24,
+          shadowColor: colors.cerulean[900],
+          shadowOffset: { width: 0, height: 16 },
+          shadowOpacity: 0.35,
+          shadowRadius: 24,
+          elevation: 20,
+        }}
+        accessible
+        accessibilityRole="header"
+      >
+        <View
+          className="bg-white/20 w-20 h-20 rounded-[28px] items-center justify-center mb-6"
+          style={{
+            borderWidth: 2,
+            borderColor: "rgba(255,255,255,0.3)",
+          }}
+        >
+          <Feather name="activity" size={40} color="white" />
+        </View>
+        <Text className="text-4xl font-black text-white tracking-tighter">
+          Zealthy
+        </Text>
+        <Text className="text-base text-white/90 font-bold mt-1 uppercase tracking-[4px]">
+          Care Portal
+        </Text>
+      </View>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
@@ -120,49 +157,38 @@ export default function LoginScreen() {
         <ScrollView
           contentContainerStyle={{
             flexGrow: 1,
-            justifyContent: "center",
-            paddingBottom: 320,
+            paddingHorizontal: 24,
+            paddingTop: 32,
+            paddingBottom: 24,
           }}
-          className="px-8"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header Section */}
-          <View className="mb-14 items-center" accessible={true} accessibilityRole="header">
-            <View
-              className="bg-cerulean-600 w-24 h-24 rounded-[32px] items-center justify-center mb-8"
-              style={{
-                shadowColor: colors.cerulean[900],
-                shadowOffset: { width: 0, height: 8 },
-                shadowOpacity: 0.35,
-                shadowRadius: 16,
-                elevation: 8,
-              }}
-            >
-              <Feather name="activity" size={48} color="white" />
-            </View>
-            <Text className="text-6xl font-black text-slate-900 tracking-tighter">
-              Zealthy
-            </Text>
-            <Text className="text-xl text-cerulean-600 font-black mt-1 uppercase tracking-[3px]">
-              Care Portal
-            </Text>
-          </View>
-
-          {/* Form Section */}
-          <View>
+          {/* Form card - Directory-style white card */}
+          <View
+            className="bg-white rounded-[32px] p-6 mb-6"
+            style={{
+              shadowColor: colors.cerulean[300],
+              shadowOffset: { width: 0, height: 12 },
+              shadowOpacity: 0.12,
+              shadowRadius: 24,
+              elevation: 12,
+              borderWidth: 1,
+              borderColor: colors.papaya_whip[800],
+            }}
+          >
             {error && (
               <View
-                className="bg-primary_scarlet-600 p-5 rounded-[24px] mb-8"
+                className="bg-primary_scarlet-500 p-4 rounded-[20px] mb-6"
                 style={{
                   shadowColor: colors.primary_scarlet[900],
                   shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.25,
+                  shadowOpacity: 0.2,
                   shadowRadius: 8,
                   elevation: 6,
                 }}
               >
-                <Text className="text-white text-center font-black text-sm uppercase">
+                <Text className="text-white text-center font-bold text-sm">
                   {error}
                 </Text>
               </View>
@@ -194,52 +220,63 @@ export default function LoginScreen() {
             />
           </View>
 
-          {/* High-Visibility Sign In Button */}
+          {/* Sign In - yellow CTA matching NEW PATIENT FAB */}
           <TouchableOpacity
             onPress={handleLogin}
             disabled={isButtonDisabled}
             activeOpacity={0.9}
             accessibilityRole="button"
-            className={`mt-6 py-6 rounded-[24px] items-center ${
-              isButtonDisabled ? "bg-slate-200" : "bg-bright_amber-500"
-            }`}
-            style={
-              isButtonDisabled
-                ? {}
-                : {
-                    shadowColor: colors.bright_amber[400],
-                    shadowOffset: { width: 0, height: 8 },
-                    shadowOpacity: 0.4,
-                    shadowRadius: 16,
-                    elevation: 8,
-                  }
-            }
+            accessibilityLabel="Sign in"
+            style={{
+              backgroundColor: isButtonDisabled ? "#e2e8f0" : colors.bright_amber[500],
+              paddingVertical: 20,
+              borderRadius: 24,
+              alignItems: "center",
+              ...(isButtonDisabled ? {} : {
+                shadowColor: colors.bright_amber[400],
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.45,
+                shadowRadius: 20,
+                elevation: 10,
+              }),
+            }}
           >
             {isLoading ? (
-              <ActivityIndicator color={colors.cerulean[100]} />
+              <ActivityIndicator color={colors.cerulean[500]} />
             ) : (
-              <Text 
-                className={`text-xl font-black uppercase tracking-[2px] ${
-                  isButtonDisabled ? "text-slate-400" : "text-cerulean-100"
-                }`}
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: "900",
+                  letterSpacing: 2,
+                  color: isButtonDisabled ? "#94a3b8" : colors.cerulean[500],
+                }}
+                className="uppercase"
               >
                 Sign In
               </Text>
             )}
           </TouchableOpacity>
+        </ScrollView>
 
-          {/* Admin access */}
+        {/* Staff portal - pinned to bottom, compact */}
+        <View
+          style={{
+            paddingHorizontal: 24,
+            paddingBottom: insets.bottom + 16,
+            paddingTop: 16,
+          }}
+        >
           <TouchableOpacity
             onPress={() => router.push("/admin" as any)}
-            activeOpacity={0.6}
-            className="mt-32 py-4"
+            activeOpacity={0.7}
+            className="py-3 px-4 rounded-xl border border-cerulean-200 bg-cerulean-50"
           >
-            <Text className="text-center text-slate-400 font-bold text-xs tracking-[1px] uppercase">
-              Staff & EMR Portal: <Text className="text-cerulean-600 font-black underline">Enter Here</Text>
+            <Text className="text-center text-slate-500 font-medium text-[10px] tracking-widest uppercase">
+              Staff & EMR Portal · <Text style={{ color: colors.cerulean[500], fontWeight: "700" }}>Enter Here</Text>
             </Text>
           </TouchableOpacity>
-
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </View>
   );

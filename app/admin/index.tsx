@@ -151,12 +151,12 @@ export default function AdminDashboard() {
         <View className="flex-row items-center" style={{ minWidth: 140, justifyContent: "space-between" }}>
           <Text
             className="font-black uppercase tracking-wider"
-            style={{ color: colors.cerulean[100], fontSize: 12 }}
+            style={{ color: colors.cerulean[500], fontSize: 12 }}
             numberOfLines={1}
           >
             New Patient
           </Text>
-          <Feather name="plus" size={18} color={colors.cerulean[100]} />
+          <Feather name="plus" size={18} color={colors.cerulean[500]} />
         </View>
       </TouchableOpacity>
     </View>
