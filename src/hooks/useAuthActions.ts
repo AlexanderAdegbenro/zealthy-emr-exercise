@@ -5,6 +5,7 @@ import { zealthyAlert } from '@/src/utils/alerts';
 
 export const useAuthActions = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const login = async (email: string, pass: string) => {
     if (!email || !pass) {
@@ -13,16 +14,18 @@ export const useAuthActions = () => {
     }
 
     setIsLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    setError(null);
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: pass });
 
-    if (error) {
-      zealthyAlert("Login Failed", error.message);
+    if (signInError) {
+      setError(signInError.message);
       setIsLoading(false);
       return;
     }
 
+    setError(null);
     router.replace('/');
   };
 
-  return { login, isLoading };
+  return { login, isLoading, error };
 };

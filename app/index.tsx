@@ -1,7 +1,8 @@
 import { Redirect } from "expo-router";
 import { View, ActivityIndicator, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAuth } from "../src/context/AuthProvider";
+import { useAuth } from "@/src/context/AuthProvider";
+import colors from "@/src/theme/colors.js";
 
 export default function Index() {
   const insets = useSafeAreaInsets();
@@ -11,13 +12,13 @@ export default function Index() {
   if (loading) {
     return (
       <View
-        className="flex-1 justify-center items-center bg-white"
+        className="flex-1 justify-center items-center bg-papaya_whip-900"
         style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
         accessibilityRole="progressbar"
         accessibilityLabel="Checking authentication"
       >
-        <ActivityIndicator size="large" color="#2563eb" />
-        <Text className="mt-4 text-gray-500 text-base">Verifying session...</Text>
+        <ActivityIndicator size="large" color={colors.cerulean[500]} />
+        <Text className="mt-4 text-cerulean-400 text-base">Verifying session...</Text>
       </View>
     );
   }

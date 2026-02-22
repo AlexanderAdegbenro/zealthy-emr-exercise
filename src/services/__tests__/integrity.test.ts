@@ -1,4 +1,4 @@
-import { getUpcomingItems } from "../../utils/dateHelpers";
+import { getUpcomingItems } from "@/src/utils/dateHelpers";
 
 describe("Patient Portal Logic - Critical Paths", () => {
   const now = Date.now();

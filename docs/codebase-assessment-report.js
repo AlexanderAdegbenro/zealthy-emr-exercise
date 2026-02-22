@@ -172,10 +172,6 @@ function main() {
     fs.mkdirSync(OUT_DIR, { recursive: true });
   }
   fs.writeFileSync(OUT_FILE, REPORT, "utf8");
-  console.log("Report written to:", OUT_FILE);
-  console.log("\n--- Report preview (first 80 lines) ---\n");
-  console.log(REPORT.split("\n").slice(0, 80).join("\n"));
-  console.log("\n... (see file for full report)");
 }
 
 main();

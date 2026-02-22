@@ -1,19 +1,21 @@
+/**
+ * Admin-only API: creates auth user + profile. Uses server env (SUPABASE_SERVICE_ROLE_KEY).
+ */
 import { createClient } from "@supabase/supabase-js";
-import { Database } from "../../src/lib/database.types";
+import { Database } from "@/src/lib/database.types";
+import { getServerEnv } from "@/src/config/serverEnv";
 
 type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
 export async function POST(request: Request) {
-  // 1. Guard against missing environment variables
-  if (!supabaseUrl || !serviceRoleKey) {
+  const serverEnv = getServerEnv();
+  if (!serverEnv) {
     return Response.json(
       { success: false, error: "Server configuration missing: SUPABASE_SERVICE_ROLE_KEY is required." },
       { status: 500 }
     );
   }
+  const { supabaseUrl, serviceRoleKey } = serverEnv;
 
   // 2. Parse and Validate Request Body
   let body: { email?: string; password?: string; first_name?: string; last_name?: string };
@@ -76,7 +78,6 @@ export async function POST(request: Request) {
     }, { status: 201 });
 
   } catch (err: any) {
-    console.error("Critical API Error (create-user):", err.message);
     return Response.json(
       { success: false, error: err.message || "An internal server error occurred." },
       { status: err.status || 500 }

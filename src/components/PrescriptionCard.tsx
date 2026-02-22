@@ -1,15 +1,24 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 interface PrescriptionCardProps {
   medicationName: string;
   dosage: string;
-  quantity: number | string;
+  quantity?: number | string;
   refillDate: string;
   refillSchedule?: string;
   instructions?: string;
+  onDelete?: () => void;
 }
+
+const cardShadow = {
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 12 },
+  shadowOpacity: 0.1,
+  shadowRadius: 25,
+  elevation: 12,
+};
 
 export function PrescriptionCard({
   medicationName,
@@ -17,59 +26,46 @@ export function PrescriptionCard({
   quantity,
   refillDate,
   refillSchedule,
+  instructions,
+  onDelete,
 }: PrescriptionCardProps) {
+  const refillFormatted = new Date(refillDate).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const subParts = [quantity ? `Qty: ${quantity}` : null, refillSchedule].filter(Boolean);
+  const refillLine = `Refill ${refillFormatted}`;
+  const subtext = [...subParts, refillLine].filter(Boolean).join(" • ");
+
   return (
     <View
-      className="bg-white p-5 rounded-2xl border border-cerulean-100 mb-3"
-      style={styles.cardShadow}
+      className="relative bg-white p-6 rounded-[30px] border border-papaya_whip-800 mb-4"
+      style={cardShadow}
     >
-      {/* Header: Medication Name */}
-      <View className="mb-3">
-        <Text className="text-cerulean-700 font-bold text-lg">
-          {medicationName}
+      {onDelete ? (
+        <TouchableOpacity
+          onPress={onDelete}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          className="absolute top-3 right-3 z-10 flex-row items-center gap-1.5"
+          activeOpacity={0.8}
+        >
+          <Ionicons name="trash-outline" size={14} color="#dd1c1a" />
+          <Text className="text-primary_scarlet-500 font-bold text-xs">Remove</Text>
+        </TouchableOpacity>
+      ) : null}
+      <Text className="text-slate-400 font-bold uppercase text-xs tracking-widest mb-2">
+        Refill due
+      </Text>
+      <View className="bg-turquoise_surf-500 rounded-full px-4 py-2 self-start mb-2">
+        <Text className="text-white font-semibold text-sm">{medicationName} – {dosage}</Text>
+      </View>
+      <Text className="text-slate-900 font-medium text-base mt-1">{subtext}</Text>
+      {instructions ? (
+        <Text className="text-slate-900 font-medium mt-0.5 text-sm" numberOfLines={2}>
+          {instructions}
         </Text>
-      </View>
-
-      {/* Metadata Badges: Dosage & Quantity */}
-      <View className="flex-row flex-wrap gap-2 mb-4">
-        <View className="bg-cerulean-50 px-3 py-1 rounded-full border border-cerulean-100">
-          <Text className="text-cerulean-700 text-xs font-bold">
-            {dosage}
-          </Text>
-        </View>
-        <View className="bg-cerulean-50 px-3 py-1 rounded-full border border-cerulean-100">
-          <Text className="text-cerulean-700 text-xs font-bold">
-            Qty: {quantity}
-          </Text>
-        </View>
-      </View>
-
-      {/* Status Row: Refill Schedule & Date */}
-      <View className="flex-row items-center justify-between border-t border-slate-100 pt-3">
-        <View className="flex-row items-center gap-1.5">
-          <Ionicons name="calendar-outline" size={14} color="#64748b" />
-          <Text className="text-slate-500 text-xs font-medium">
-            Refill Schedule
-          </Text>
-        </View>
-        <Text className="text-cerulean-600 text-xs font-bold">
-          {new Date(refillDate).toLocaleDateString(undefined, {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })}
-        </Text>
-      </View>
+      ) : null}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  cardShadow: {
-    shadowColor: "#171717",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-});

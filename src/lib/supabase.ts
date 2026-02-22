@@ -2,9 +2,9 @@ import "react-native-url-polyfill/auto";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
 import type { SupportedStorage } from "@supabase/supabase-js";
-import { ENV } from "../config/env";
-import { Database } from "./database.types";
-import { zealthyAlert } from "../utils/alerts";
+import { ENV } from "@/src/config/env";
+import { Database } from "@/src/lib/database.types";
+import { zealthyAlert } from "@/src/utils/alerts";
 
 const supabaseUrl = ENV.SUPABASE_URL;
 const supabaseAnonKey = ENV.SUPABASE_ANON_KEY;

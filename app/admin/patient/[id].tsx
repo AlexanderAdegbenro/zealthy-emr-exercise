@@ -5,26 +5,40 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
+  Pressable,
   Modal,
   TextInput,
   Platform,
   KeyboardAvoidingView,
   StyleSheet,
+  Alert,
+  RefreshControl,
+  LayoutAnimation,
+  UIManager,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import * as Haptics from "expo-haptics";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useAppointments, useCreateAppointment } from "../../../src/hooks/useAppointments";
-import { adminService } from "../../../src/services/adminService";
-import { zealthyAlert } from "../../../src/utils/alerts";
-import { FormInput } from "../../../src/components/ui/FormInput";
-import { PrescriptionCard } from "../../../src/components/PrescriptionCard";
-import { EmptyState } from "../../../src/components/ui/EmptyState";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAppointments, useCreateAppointment } from "@/src/hooks/useAppointments";
+import { adminService } from "@/src/services/adminService";
+import { zealthyAlert } from "@/src/utils/alerts";
+import { PrescriptionSchema } from "@/src/lib/validations";
+import { Feather } from "@expo/vector-icons";
+import { FormInput } from "@/src/components/ui/FormInput";
+import { StatusPill } from "@/src/components/ui/StatusPill";
+import { MedicalCard } from "@/src/components/ui/MedicalCard";
+import colors from "@/src/theme/colors.js";
 
-const REPEAT_OPTIONS: Array<"none" | "weekly" | "monthly"> = ["none", "weekly", "monthly"];
+const REPEAT_OPTIONS: ("none" | "weekly" | "monthly")[] = ["none", "weekly", "monthly"];
 
 const isWeb = Platform.OS === "web";
+
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 function formatDateForDisplay(isoOrEmpty: string): string {
   if (!isoOrEmpty) return "";
@@ -32,15 +46,79 @@ function formatDateForDisplay(isoOrEmpty: string): string {
   return isNaN(d.getTime()) ? "" : d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
-import { PrescriptionSchema } from "../../../src/lib/validations";
-
 export default function PatientDetail() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   
-  const { data: appointments, isLoading: appointmentsLoading } = useAppointments(id || "");
+  const queryClient = useQueryClient();
+  const { data: appointments, isLoading: appointmentsLoading, refetch: refetchAppointments } = useAppointments(id || "");
   const { mutate: createAppointment, isPending: isCreatingAppointment } = useCreateAppointment();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleEndRecurring = async (appointmentId: string) => {
+    try {
+      await adminService.endRecurringAppointment(appointmentId);
+      zealthyAlert("Success", "Recurring series ended.");
+      queryClient.invalidateQueries({ queryKey: ["appointments", id] });
+    } catch (err: any) {
+      zealthyAlert("Error", err?.message ?? "Failed to end series.");
+    }
+  };
+
+  const handleDeleteAppointment = (appointmentId: string) => {
+    if (Platform.OS !== "web") {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    }
+    Alert.alert(
+      "Cancel Appointment?",
+      "Are you sure you want to delete this appointment?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await adminService.deleteAppointment(appointmentId);
+              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+              zealthyAlert("Success", "Appointment cancelled.");
+              queryClient.invalidateQueries({ queryKey: ["appointments", id] });
+            } catch (err: any) {
+              zealthyAlert("Error", err?.message ?? "Failed to cancel appointment.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeletePrescription = async (prescriptionId: string) => {
+    const doDelete = async () => {
+      try {
+        await adminService.deletePrescription(prescriptionId);
+        zealthyAlert("Success", "Medication removed.");
+        fetchHistory();
+      } catch {
+        zealthyAlert("Error", "Could not remove medication.");
+      }
+    };
+
+    if (isWeb && typeof window !== "undefined") {
+      const ok = window.confirm("Remove Medication?\n\nAre you sure you want to delete this prescription?");
+      if (ok) await doDelete();
+      return;
+    }
+
+    Alert.alert(
+      "Remove Medication?",
+      "Are you sure you want to delete this prescription?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Remove", style: "destructive", onPress: doDelete },
+      ]
+    );
+  };
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -51,11 +129,10 @@ export default function PatientDetail() {
   const [providerName, setProviderName] = useState("");
   const [firstAppointmentDate, setFirstAppointmentDate] = useState("");
   const [repeatSchedule, setRepeatSchedule] = useState<"none" | "weekly" | "monthly">("none");
-  const [repeatDropdownOpen, setRepeatDropdownOpen] = useState(false);
   const [showAppointmentDatePicker, setShowAppointmentDatePicker] = useState(false);
 
   const [prescriptionModalVisible, setPrescriptionModalVisible] = useState(false);
-  const [medications, setMedications] = useState<Array<{ id: string; name: string; available_dosages: string[] }>>([]);
+  const [medications, setMedications] = useState<{ id: string; name: string; available_dosages: string[] }[]>([]);
   const [medicationsLoading, setMedicationsLoading] = useState(false);
   const [selectedMedicationId, setSelectedMedicationId] = useState("");
   const [selectedDosage, setSelectedDosage] = useState("");
@@ -63,7 +140,6 @@ export default function PatientDetail() {
   const [frequency, setFrequency] = useState("");
   const [startDate, setStartDate] = useState("");
   const [instructions, setInstructions] = useState("");
-  const [medDropdownOpen, setMedDropdownOpen] = useState(false);
   const [prescriptionSubmitting, setPrescriptionSubmitting] = useState(false);
   const [showPrescriptionDatePicker, setShowPrescriptionDatePicker] = useState(false);
 
@@ -74,13 +150,18 @@ export default function PatientDetail() {
       const { data: history, error } = await adminService.getPatientMedicalHistory(id);
       if (error) throw error;
       setData(history);
-    } catch (err) {
-      console.error("Error fetching patient history:", err);
+    } catch {
       zealthyAlert("Error", "Could not load patient data.");
     } finally {
       setLoading(false);
     }
   }, [id]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchHistory(), refetchAppointments()]);
+    setRefreshing(false);
+  }, [fetchHistory, refetchAppointments]);
 
   useEffect(() => {
     fetchHistory();
@@ -100,21 +181,27 @@ export default function PatientDetail() {
   }, [prescriptionModalVisible, medications.length]);
 
   const openAppointmentModal = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
     setProviderName("");
     setFirstAppointmentDate("");
     setRepeatSchedule("none");
-    setRepeatDropdownOpen(false);
     setShowAppointmentDatePicker(false);
     setAppointmentModalVisible(true);
   };
 
   const closeAppointmentModal = () => {
     setAppointmentModalVisible(false);
-    setRepeatDropdownOpen(false);
     setShowAppointmentDatePicker(false);
   };
 
+  const isScheduleFormValid = providerName.trim().length > 0 && !!firstAppointmentDate;
+
   const handleScheduleAppointment = async () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
     const trimmed = providerName.trim();
     if (!trimmed || !firstAppointmentDate) {
       zealthyAlert("Missing fields", "Please enter provider name and appointment date.");
@@ -140,20 +227,21 @@ export default function PatientDetail() {
   };
 
   const openPrescriptionModal = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
     setSelectedMedicationId("");
     setSelectedDosage("");
     setQuantity("30");
     setFrequency("");
     setStartDate("");
     setInstructions("");
-    setMedDropdownOpen(false);
     setShowPrescriptionDatePicker(false);
     setPrescriptionModalVisible(true);
   };
 
   const closePrescriptionModal = () => {
     setPrescriptionModalVisible(false);
-    setMedDropdownOpen(false);
     setShowPrescriptionDatePicker(false);
   };
 
@@ -170,19 +258,23 @@ export default function PatientDetail() {
   }).success;
 
   const handleAddPrescription = async () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
     if (!id) return;
     if (!isPrescriptionValid) {
       zealthyAlert("Missing fields", "Please complete all required fields correctly.");
       return;
     }
     setPrescriptionSubmitting(true);
+    const refillDateIso = new Date(startDate).toISOString().split("T")[0];
     const { error } = await adminService.addPrescription({
       patient_id: id,
       medication_id: selectedMedicationId,
       dosage: selectedDosage,
-      quantity: parseInt(quantity),
-      frequency: frequency.trim(),
-      start_date: new Date(startDate).toISOString().split("T")[0],
+      refill_schedule: frequency.trim(),
+      refill_date: refillDateIso,
+      quantity: parseInt(quantity, 10) || 30,
       instructions: instructions.trim() || undefined,
     });
     setPrescriptionSubmitting(false);
@@ -197,161 +289,228 @@ export default function PatientDetail() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 bg-slate-50 justify-center items-center">
-        <ActivityIndicator color="#086788" size="large" />
+      <View className="flex-1 bg-papaya_whip-900 justify-center items-center">
+        <ActivityIndicator color={colors.cerulean[500]} size="large" />
       </View>
     );
   }
+
+  const patientDisplayName = data ? [data.first_name, data.last_name].filter(Boolean).join(" ") : "Patient";
+  const patientIdDisplay = id ? `#${id.slice(-6).toUpperCase()}` : "";
+
+  const fabShadow = {
+    shadowColor: "#06aed5",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 12,
+  };
+
+  const within48Hours = (isoDate: string) => {
+    const ms = new Date(isoDate).getTime() - Date.now();
+    return ms > 0 && ms <= 48 * 60 * 60 * 1000;
+  };
 
   return (
     <>
       <Stack.Screen
         options={{
-          headerShown: true,
-          title: data ? `${data.last_name}, ${data.first_name}` : "Patient Details",
-          headerBackTitle: "Back",
-          headerStyle: { backgroundColor: "#f8fafc" }, // slate-50
-          headerShadowVisible: false,
-          headerTintColor: "#0f172a", // slate-900
-          headerTitleStyle: { fontWeight: "700", fontSize: 18 },
+          headerShown: false,
         }}
       />
+      <View className="flex-1 bg-papaya_whip-900">
       <ScrollView
-        className="flex-1 bg-slate-50"
-        contentContainerStyle={{ paddingTop: 20, paddingBottom: insets.bottom + 32 }}
+        className="flex-1"
+        contentContainerStyle={{ padding: 24, paddingBottom: 100 + insets.bottom }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.cerulean[500]]} />
+        }
       >
-        {/* Patient ID Badge */}
-        <View className="px-5 mb-8 items-center">
-          <View className="bg-white border border-slate-200 px-4 py-1.5 rounded-full shadow-sm">
-            <Text className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              ID {id?.slice(0, 8).toUpperCase()}
-            </Text>
-          </View>
+        {/* Header: Admin Mode - turquoise distinguishes from Patient Portal */}
+        <View
+          className="relative bg-turquoise_surf-600 rounded-b-[40px] pt-12 pb-8 px-6"
+          style={[styles.headerShadow, { paddingTop: insets.top + 48 }]}
+        >
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            className="absolute left-4 top-0 z-10 p-2"
+            style={{ paddingTop: insets.top }}
+          >
+            <Ionicons name="chevron-back" size={24} color="#fff" />
+          </Pressable>
+          <Text className="text-white text-3xl font-bold pr-10" numberOfLines={1}>
+            Patient Profile: {patientDisplayName}
+          </Text>
+          <Text className="text-white text-lg mt-1" numberOfLines={1}>
+            ID: {patientIdDisplay}
+          </Text>
         </View>
 
-        {/* Sections */}
-        <View className="px-5 mt-2 gap-6">
-          {/* Appointments card */}
-          <View className="bg-white rounded-3xl p-5 border border-slate-100" style={styles.cardShadow}>
-            <View className="flex-row items-center justify-between mb-4">
-              <View className="flex-row items-center gap-2">
-                <View className="w-8 h-8 rounded-xl bg-cerulean-600 items-center justify-center">
-                  <Ionicons name="calendar" size={16} color="#fff" />
-                </View>
-                <Text className="text-lg font-bold text-slate-900">Appointments</Text>
-              </View>
-              <TouchableOpacity
-                onPress={openAppointmentModal}
-                className="flex-row items-center gap-1 active:opacity-60"
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Text className="text-sm font-bold text-neutral-800">Schedule</Text>
-                <Ionicons name="add" size={18} color="#262626" />
-              </TouchableOpacity>
-            </View>
+        {/* Upcoming Appointments */}
+        <Text className="text-cerulean-100 font-bold text-xl mt-8 mb-4 px-2">Upcoming Appointments</Text>
 
-            <View>
-              {appointments && appointments.length > 0 ? (
-                <View className="gap-3">
-                  {appointments.map((apt: any) => (
-                    <View
-                      key={apt.id}
-                      className="bg-white rounded-2xl border border-bright_amber-200 p-4 relative overflow-hidden"
-                    >
-                      <View className="absolute left-0 top-0 bottom-0 w-1.5 bg-bright_amber-400" />
-                      <View className="pl-3">
-                        <Text className="font-bold text-slate-900 text-base">
-                          {new Date(apt.first_appointment_date).toLocaleDateString(undefined, {
-                            weekday: "short",
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
-                        </Text>
-                        <Text className="text-slate-500 text-sm mt-1 font-medium">{apt.provider_name || "—"}</Text>
-                        {apt.repeat_schedule && apt.repeat_schedule !== "none" && (
-                          <View className="mt-2 flex-row items-center gap-1.5">
-                            <Ionicons name="repeat" size={12} color="#086788" />
-                            <Text className="text-cerulean-600 text-xs font-semibold capitalize">{apt.repeat_schedule}</Text>
-                          </View>
-                        )}
-                      </View>
+        {appointments && appointments.length > 0 ? (
+          <View className="gap-4">
+            {appointments.map((apt: any) => {
+              const isUrgent = within48Hours(apt.first_appointment_date);
+              return (
+                <MedicalCard key={apt.id} className="relative">
+                  <TouchableOpacity
+                    onPress={() => handleDeleteAppointment(apt.id)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    className="absolute top-0 right-0 z-10 flex-row items-center gap-1.5"
+                    activeOpacity={0.8}
+                  >
+                    <Feather name="trash-2" size={14} color={colors.primary_scarlet[500]} />
+                    <Text className="text-primary_scarlet-500 font-semibold text-sm">Cancel</Text>
+                  </TouchableOpacity>
+                  <Text className="text-xl font-bold text-cerulean-100 pr-20">
+                    {new Date(apt.first_appointment_date).toLocaleDateString(undefined, {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </Text>
+                  {isUrgent && (
+                    <View className="bg-bright_amber-500 rounded-full px-3 py-1 self-start mt-2 shadow-sm">
+                      <Text className="text-white text-[10px] font-black uppercase">Urgent</Text>
                     </View>
-                  ))}
-                </View>
-              ) : (
-                <View className="border-2 border-dashed border-slate-200 rounded-2xl p-8 items-center justify-center bg-slate-50/50">
-                  <View className="w-12 h-12 rounded-xl bg-slate-100 items-center justify-center mb-3">
-                    <Ionicons name="calendar-outline" size={24} color="#94a3b8" />
-                  </View>
-                  <Text className="text-slate-400 font-medium text-sm text-center">No appointments on record</Text>
-                </View>
-              )}
-            </View>
+                  )}
+                  {apt.repeat_schedule && apt.repeat_schedule !== "none" && (
+                    <StatusPill label={apt.repeat_schedule} variant="info" />
+                  )}
+                  <Text className="text-slate-600 font-bold text-[10px] tracking-[1.5px] uppercase mt-1">Provider</Text>
+                  <Text className="text-xl font-bold text-cerulean-100">{apt.provider_name || "—"}</Text>
+                  {apt.status ? (
+                    <>
+                      <Text className="text-slate-600 font-bold text-[10px] tracking-[1.5px] uppercase mt-1">Status</Text>
+                      <Text className="text-xl font-bold text-cerulean-100">{apt.status}</Text>
+                    </>
+                  ) : null}
+                  {apt.repeat_schedule && apt.repeat_schedule !== "none" && (
+                    <TouchableOpacity
+                      onPress={() => handleEndRecurring(apt.id)}
+                      className="mt-3 pt-3 border-t border-papaya_whip-800 rounded-2xl"
+                      activeOpacity={0.8}
+                    >
+                      <Text className="text-primary_scarlet-500 font-semibold text-sm">End Series</Text>
+                    </TouchableOpacity>
+                  )}
+                </MedicalCard>
+              );
+            })}
           </View>
-
-          {/* Prescriptions card */}
-          <View className="bg-white rounded-3xl p-5 border border-slate-100" style={styles.cardShadow}>
-            <View className="flex-row items-center justify-between mb-4">
-              <View className="flex-row items-center gap-2">
-                <View className="w-8 h-8 rounded-xl bg-cerulean-600 items-center justify-center">
-                  <Ionicons name="medkit" size={16} color="#fff" />
-                </View>
-                <Text className="text-lg font-bold text-slate-900">Prescriptions</Text>
-              </View>
-              <TouchableOpacity
-                onPress={openPrescriptionModal}
-                className="flex-row items-center gap-1 active:opacity-60"
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Text className="text-sm font-bold text-neutral-800">New med</Text>
-                <Ionicons name="add" size={18} color="#262626" />
-              </TouchableOpacity>
+        ) : (
+          <MedicalCard className="flex-row items-center gap-4">
+            <View className="w-14 h-14 rounded-2xl bg-cerulean-600 items-center justify-center flex-shrink-0">
+              <Ionicons name="calendar-outline" size={28} color="#fff" />
             </View>
+            <Text className="text-cerulean-600 font-medium flex-1" numberOfLines={2}>
+              No appointments on record
+            </Text>
+          </MedicalCard>
+        )}
 
-            <View>
-              {data?.prescriptions?.length > 0 ? (
-                <View className="gap-3">
-                  {data.prescriptions.map((rx: any) => (
-                    <PrescriptionCard
-                      key={rx.id}
-                      medicationName={rx.medications?.name || "Unknown"}
-                      dosage={rx.dosage}
-                      quantity={rx.quantity}
-                      refillDate={rx.refill_date}
-                      refillSchedule={rx.refill_schedule}
-                    />
-                  ))}
+        {/* Active Prescriptions */}
+        <Text className="text-cerulean-100 font-bold text-xl mt-8 mb-4 px-2">Active Prescriptions</Text>
+
+        {data?.prescriptions?.length > 0 ? (
+          <View className="gap-4">
+            {data.prescriptions.map((rx: any) => (
+              <MedicalCard key={rx.id} className="relative">
+                <TouchableOpacity
+                  onPress={() => handleDeletePrescription(rx.id)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  className="absolute top-0 right-0 z-10 flex-row items-center gap-1.5"
+                  activeOpacity={0.8}
+                >
+                  <Feather name="trash-2" size={14} color={colors.primary_scarlet[500]} />
+                  <Text className="text-primary_scarlet-500 font-semibold text-sm">Remove</Text>
+                </TouchableOpacity>
+                <Text className="text-slate-600 font-bold text-[10px] tracking-[1.5px] uppercase mb-1">Dosage</Text>
+                <View className="bg-turquoise_surf-500 rounded-full px-4 py-2 self-start mb-2 shadow-sm">
+                  <Text className="text-white font-semibold text-sm">{rx.dosage}</Text>
                 </View>
-              ) : (
-                <View className="border-2 border-dashed border-slate-200 rounded-2xl p-8 items-center justify-center bg-slate-50/50">
-                  <View className="w-12 h-12 rounded-xl bg-slate-100 items-center justify-center mb-3">
-                    <Ionicons name="medkit-outline" size={24} color="#94a3b8" />
-                  </View>
-                  <Text className="text-slate-400 font-medium text-sm text-center">No active prescriptions</Text>
-                </View>
-              )}
-            </View>
+                <Text className="text-slate-600 font-bold text-[10px] tracking-[1.5px] uppercase">Medication</Text>
+                <Text className="text-xl font-bold text-cerulean-100 pr-24">
+                  {rx.medications?.name || "Unknown Medication"}
+                </Text>
+                {(rx.refill_schedule || rx.refill_date || rx.instructions) ? (
+                  <Text className="text-slate-500 font-medium mt-1">
+                    {[rx.refill_schedule, rx.refill_date ? `Refill ${new Date(rx.refill_date).toLocaleDateString()}` : null, rx.instructions].filter(Boolean).join(" · ")}
+                  </Text>
+                ) : null}
+              </MedicalCard>
+            ))}
+            <Pressable className="bg-slate-50 p-4 rounded-2xl flex-row justify-between items-center mt-0" style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
+              <Text className="text-cerulean-500 font-semibold">View full Prescriptions</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.cerulean[500]} />
+            </Pressable>
           </View>
-        </View>
+        ) : (
+          <MedicalCard className="flex-row items-center gap-4">
+            <View className="w-14 h-14 rounded-2xl bg-cerulean-600 items-center justify-center flex-shrink-0">
+              <Ionicons name="medkit-outline" size={28} color="#fff" />
+            </View>
+            <Text className="text-cerulean-600 font-medium flex-1" numberOfLines={2}>
+              No active prescriptions
+            </Text>
+          </MedicalCard>
+        )}
       </ScrollView>
+      </View>
+
+      {/* FABs: Schedule Appt + New Rx */}
+      <View
+        className="absolute right-0 flex-row gap-3 items-center"
+        style={{ bottom: 24 + insets.bottom, paddingHorizontal: 24 }}
+      >
+        <TouchableOpacity
+          onPress={openAppointmentModal}
+          className="w-14 h-14 rounded-2xl bg-turquoise_surf-500 items-center justify-center"
+          style={fabShadow}
+          activeOpacity={0.9}
+        >
+          <Ionicons name="calendar" size={22} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={openPrescriptionModal}
+          className="w-14 h-14 rounded-2xl bg-cerulean-500 items-center justify-center"
+          style={[fabShadow, { shadowColor: colors.cerulean[500] }]}
+          activeOpacity={0.9}
+        >
+          <Ionicons name="medkit" size={22} color="#fff" />
+        </TouchableOpacity>
+      </View>
 
       {/* Schedule Appointment Modal */}
-      <Modal visible={appointmentModalVisible} transparent animationType="fade">
-        <View className="flex-1 bg-slate-900/40 justify-end md:justify-center px-0 md:px-4 pb-0 md:pb-8">
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            className="bg-white rounded-t-3xl md:rounded-3xl max-h-[90%]"
-            style={styles.modalShadow}
-          >
-            <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mt-3 mb-2" />
-            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 24, paddingTop: 12 }}>
+      <Modal
+        visible={appointmentModalVisible}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={closeAppointmentModal}
+        presentationStyle="overFullScreen"
+        supportedOrientations={["portrait", "landscape"]}
+      >
+        <View style={[styles.modalOverlay, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+          <Pressable style={styles.modalBackdrop} onPress={closeAppointmentModal} />
+          <View style={[styles.modalSheet, styles.modalShadow, { maxHeight: "90%", paddingBottom: insets.bottom }]}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              style={{ flex: 1 }}
+            >
+              <View className="w-12 h-1.5 bg-papaya_whip-400 rounded-full self-center mt-3 mb-2" />
+              <View style={styles.modalContent}>
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 24, paddingTop: 12, paddingBottom: 16 }} style={styles.modalScroll}>
               <View className="flex-row items-center gap-3 mb-6">
                 <View className="w-12 h-12 rounded-2xl bg-cerulean-50 items-center justify-center">
-                  <Ionicons name="calendar" size={24} color="#086788" />
+                  <Ionicons name="calendar" size={24} color={colors.cerulean[500]} />
                 </View>
-                <Text className="text-2xl font-bold text-slate-900">Schedule</Text>
+                <Text className="text-2xl font-bold text-cerulean-100">Schedule</Text>
               </View>
 
               <FormInput
@@ -363,12 +522,12 @@ export default function PatientDetail() {
               />
 
               <View className="mb-4">
-                <Text className="text-xs font-bold text-slate-500 uppercase mb-2 ml-1 tracking-wider">Date</Text>
+                <Text className="text-slate-600 font-bold text-[10px] tracking-[1.5px] uppercase mb-2 ml-1">Date</Text>
                 {isWeb ? (
                   <TextInput
-                    className="bg-slate-50 border border-slate-200 p-4 rounded-xl text-base text-slate-900"
+                    className="bg-papaya_whip-500 border border-papaya_whip-800 p-4 rounded-xl text-base text-cerulean-100"
                     placeholder="YYYY-MM-DD"
-                    placeholderTextColor="#94a3b8"
+                    placeholderTextColor={colors.cerulean[500]}
                     value={firstAppointmentDate}
                     onChangeText={setFirstAppointmentDate}
                     editable={!isCreatingAppointment}
@@ -378,12 +537,12 @@ export default function PatientDetail() {
                     <TouchableOpacity
                       onPress={() => setShowAppointmentDatePicker(!showAppointmentDatePicker)}
                       disabled={isCreatingAppointment}
-                      className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex-row justify-between items-center active:bg-slate-100"
+                      className="bg-papaya_whip-500 border border-papaya_whip-800 p-4 rounded-xl flex-row justify-between items-center active:opacity-80"
                     >
-                      <Text className={firstAppointmentDate ? "text-base text-slate-900 font-medium" : "text-base text-slate-400"}>
+                      <Text className={firstAppointmentDate ? "text-base text-cerulean-100 font-medium" : "text-base text-cerulean-500"}>
                         {firstAppointmentDate ? formatDateForDisplay(firstAppointmentDate) : "Select date"}
                       </Text>
-                      <Ionicons name="calendar-outline" size={20} color="#64748b" />
+                      <Ionicons name="calendar-outline" size={20} color={colors.cerulean[500]} />
                     </TouchableOpacity>
                     {showAppointmentDatePicker && (
                       <DateTimePicker
@@ -403,145 +562,168 @@ export default function PatientDetail() {
                 )}
               </View>
 
-              <View className="mb-8">
-                <Text className="text-xs font-bold text-slate-500 uppercase mb-2 ml-1 tracking-wider">Repeat</Text>
-                <TouchableOpacity
-                  onPress={() => setRepeatDropdownOpen(!repeatDropdownOpen)}
-                  className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex-row justify-between items-center active:bg-slate-100"
-                  disabled={isCreatingAppointment}
-                >
-                  <Text className="text-base text-slate-900 capitalize font-medium">{repeatSchedule}</Text>
-                  <Ionicons name={repeatDropdownOpen ? "chevron-up" : "chevron-down"} size={20} color="#64748b" />
-                </TouchableOpacity>
-                {repeatDropdownOpen && (
-                  <View className="mt-2 bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
-                    {REPEAT_OPTIONS.map((opt) => (
+              <View className="mb-4">
+                <Text className="text-slate-600 font-bold text-[10px] tracking-[1.5px] uppercase mb-2 ml-1">Repeat</Text>
+                <View className="flex-row gap-2">
+                  {REPEAT_OPTIONS.map((opt) => {
+                    const isSelected = repeatSchedule === opt;
+                    return (
                       <TouchableOpacity
                         key={opt}
-                        onPress={() => {
-                          setRepeatSchedule(opt);
-                          setRepeatDropdownOpen(false);
-                        }}
-                        className="px-4 py-3 border-b border-slate-50 active:bg-slate-50 last:border-0"
+                        onPress={() => setRepeatSchedule(opt)}
+                        disabled={isCreatingAppointment}
+                        className={`flex-1 py-3 rounded-xl border-2 items-center active:opacity-90 ${
+                          isSelected
+                            ? "bg-cerulean-500 border-cerulean-600"
+                            : "bg-papaya_whip-500 border-papaya_whip-800"
+                        }`}
                       >
-                        <Text className="text-slate-700 font-medium capitalize">{opt}</Text>
+                        <Text
+                          className={`font-semibold text-sm capitalize ${
+                            isSelected ? "text-white" : "text-cerulean-600"
+                          }`}
+                        >
+                          {opt}
+                        </Text>
                       </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View>
-
-              <View className="flex-row gap-3">
-                <TouchableOpacity
-                  onPress={closeAppointmentModal}
-                  className="flex-1 py-4 rounded-xl bg-slate-100 items-center active:bg-slate-200"
-                  disabled={isCreatingAppointment}
-                >
-                  <Text className="text-slate-600 font-bold text-base">Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleScheduleAppointment}
-                  disabled={isCreatingAppointment}
-                  className="flex-1 py-4 rounded-xl bg-cerulean-600 items-center active:bg-cerulean-700 shadow-sm shadow-cerulean-200"
-                >
-                  {isCreatingAppointment ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text className="text-white font-bold text-base">Schedule</Text>
-                  )}
-                </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
             </ScrollView>
-          </KeyboardAvoidingView>
+            {/* Sticky action row so Schedule is always visible */}
+            <View className="flex-row justify-between items-center gap-3 px-6 pb-6 pt-2 bg-white border-t border-papaya_whip-800 flex-shrink-0">
+              <Pressable
+                onPress={closeAppointmentModal}
+                disabled={isCreatingAppointment}
+                style={({ pressed }) => [
+                  { paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16, alignItems: "center", backgroundColor: colors.papaya_whip[400] },
+                  { opacity: pressed ? 0.8 : 1 },
+                ]}
+              >
+                <Text className="text-cerulean-600 font-bold text-base">Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleScheduleAppointment}
+                disabled={isCreatingAppointment}
+                style={({ pressed }) => [
+                  {
+                    paddingVertical: 14,
+                    paddingHorizontal: 24,
+                    borderRadius: 16,
+                    alignItems: "center",
+                    shadowRadius: 4,
+                    shadowOffset: { width: 0, height: 2 },
+                  },
+                  isScheduleFormValid
+                    ? { backgroundColor: colors.cerulean[500], shadowColor: colors.cerulean[500], shadowOpacity: 0.25, elevation: 2 }
+                    : { backgroundColor: colors.cerulean[300], opacity: 0.8 },
+                  { opacity: pressed ? 0.8 : 1 },
+                ]}
+              >
+                {isCreatingAppointment ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text className={`font-bold text-base ${isScheduleFormValid ? "text-white" : "text-cerulean-500"}`}>Schedule</Text>
+                )}
+              </Pressable>
+            </View>
+            </View>
+            </KeyboardAvoidingView>
+          </View>
         </View>
       </Modal>
 
       {/* Add Prescription Modal */}
-      <Modal visible={prescriptionModalVisible} transparent animationType="fade">
-        <View className="flex-1 bg-slate-900/40 justify-end md:justify-center px-0 md:px-4 pb-0 md:pb-8">
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            className="bg-white rounded-t-3xl md:rounded-3xl max-h-[90%]"
-            style={styles.modalShadow}
-          >
-            <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mt-3 mb-2" />
-            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 24, paddingTop: 12, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+      <Modal
+        visible={prescriptionModalVisible}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={closePrescriptionModal}
+        presentationStyle="overFullScreen"
+        supportedOrientations={["portrait", "landscape"]}
+      >
+        <View style={[styles.modalOverlay, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+          <Pressable style={styles.modalBackdrop} onPress={closePrescriptionModal} />
+          <View style={[styles.modalSheet, styles.modalShadow, { maxHeight: "90%", paddingBottom: insets.bottom }]}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              style={{ flex: 1 }}
+            >
+              <View className="w-12 h-1.5 bg-papaya_whip-400 rounded-full self-center mt-3 mb-2" />
+              <View style={styles.modalContent}>
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 24, paddingTop: 12, paddingBottom: 16 }} style={styles.modalScroll} showsVerticalScrollIndicator={false}>
               <View className="flex-row items-center gap-3 mb-6">
                 <View className="w-12 h-12 rounded-2xl bg-cerulean-50 items-center justify-center">
-                  <Ionicons name="medkit" size={24} color="#086788" />
+                  <Ionicons name="medkit" size={24} color={colors.cerulean[500]} />
                 </View>
                 <View>
-                  <Text className="text-2xl font-bold text-slate-900">Add Med</Text>
-                  <Text className="text-sm text-slate-500">Assign a new prescription</Text>
+                  <Text className="text-2xl font-bold text-cerulean-100">Add Med</Text>
+                  <Text className="text-sm text-cerulean-500">Assign a new prescription</Text>
                 </View>
               </View>
 
               <View className="mb-4">
-                <Text className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Medication</Text>
-                <View className="rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
-                  <TouchableOpacity
-                    onPress={() => {
-                      setMedDropdownOpen(!medDropdownOpen);
-                    }}
-                    className={`flex-row justify-between items-center px-4 py-4 ${medDropdownOpen ? "border-b border-slate-200" : ""}`}
-                    disabled={prescriptionSubmitting}
-                  >
-                    <Text className={`text-base flex-1 ${selectedMed ? "text-slate-900 font-medium" : "text-slate-400"}`} numberOfLines={1}>
-                      {selectedMed ? selectedMed.name : "Select medication"}
-                    </Text>
-                    <Ionicons name={medDropdownOpen ? "chevron-up" : "chevron-down"} size={20} color="#64748b" />
-                  </TouchableOpacity>
-                  {medDropdownOpen && (
-                    <View className="max-h-52 bg-white">
-                      {medicationsLoading ? (
-                        <View className="py-8 items-center">
-                          <ActivityIndicator size="small" color="#086788" />
-                          <Text className="text-slate-400 text-sm mt-2">Loading...</Text>
-                        </View>
-                      ) : (
-                        <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                          {medications.map((m) => (
-                            <TouchableOpacity
-                              key={m.id}
-                              onPress={() => {
-                                setSelectedMedicationId(m.id);
-                                setSelectedDosage("");
-                                setMedDropdownOpen(false);
-                              }}
-                              className="px-4 py-3 border-b border-slate-50 active:bg-slate-50"
+                <Text className="text-slate-600 font-bold text-[10px] tracking-[1.5px] uppercase mb-2 ml-1">Medication</Text>
+                {medicationsLoading ? (
+                  <View className="py-6 items-center rounded-xl bg-papaya_whip-500">
+                    <ActivityIndicator size="small" color={colors.cerulean[500]} />
+                    <Text className="text-cerulean-500 text-sm mt-2">Loading...</Text>
+                  </View>
+                ) : (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-1">
+                    <View className="flex-row gap-2 px-1">
+                      {medications.map((m) => {
+                        const isSelected = selectedMedicationId === m.id;
+                        return (
+                          <TouchableOpacity
+                            key={m.id}
+                            onPress={() => {
+                              setSelectedMedicationId(m.id);
+                              setSelectedDosage("");
+                            }}
+                            disabled={prescriptionSubmitting}
+                            className={`py-3 px-4 rounded-xl border-2 items-center active:opacity-90 ${
+                              isSelected
+                                ? "bg-cerulean-500 border-cerulean-600"
+                                : "bg-papaya_whip-500 border-papaya_whip-800"
+                            }`}
+                          >
+                            <Text
+                              className={`font-semibold text-sm ${isSelected ? "text-white" : "text-cerulean-600"}`}
+                              numberOfLines={1}
                             >
-                              <Text className="text-slate-900 font-semibold text-base">{m.name}</Text>
-                              {m.available_dosages?.length > 0 && (
-                                <Text className="text-slate-500 text-sm mt-0.5">{m.available_dosages.join(", ")}</Text>
-                              )}
-                            </TouchableOpacity>
-                          ))}
-                        </ScrollView>
-                      )}
+                              {m.name}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
                     </View>
-                  )}
-                </View>
+                  </ScrollView>
+                )}
               </View>
 
-              {selectedMedicationId && (
+              {selectedMedicationId && dosageOptions.length > 0 && (
                 <View className="mb-5">
-                  <Text className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Dosage</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+                  <Text className="text-slate-600 font-bold text-[10px] tracking-[1.5px] uppercase mb-2 ml-1">Dosage</Text>
+                  <View className="flex-row flex-wrap gap-2">
                     {dosageOptions.map((d) => {
                       const isSelected = selectedDosage === d;
                       return (
                         <TouchableOpacity
                           key={d}
                           onPress={() => setSelectedDosage(d)}
-                          className={`mr-2 px-4 py-2 rounded-full border ${
+                          disabled={prescriptionSubmitting}
+                          className={`py-3 px-4 rounded-xl border-2 items-center active:opacity-90 ${
                             isSelected
-                              ? "bg-cerulean-600 border-cerulean-600"
-                              : "bg-white border-slate-200"
+                              ? "bg-cerulean-500 border-cerulean-600"
+                              : "bg-papaya_whip-500 border-papaya_whip-800"
                           }`}
                         >
                           <Text
-                            className={`font-semibold ${
-                              isSelected ? "text-white" : "text-slate-600"
+                            className={`font-semibold text-sm ${
+                              isSelected ? "text-white" : "text-cerulean-600"
                             }`}
                           >
                             {d}
@@ -549,7 +731,7 @@ export default function PatientDetail() {
                         </TouchableOpacity>
                       );
                     })}
-                  </ScrollView>
+                  </View>
                 </View>
               )}
 
@@ -576,12 +758,12 @@ export default function PatientDetail() {
               </View>
 
               <View className="mb-4">
-                <Text className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Start date</Text>
+                <Text className="text-slate-600 font-bold text-[10px] tracking-[1.5px] uppercase mb-2 ml-1">Start date</Text>
                 {isWeb ? (
                   <TextInput
-                    className="bg-slate-50 border border-slate-200 p-4 rounded-xl text-base text-slate-900"
+                    className="bg-papaya_whip-500 border border-papaya_whip-800 p-4 rounded-xl text-base text-cerulean-100"
                     placeholder="YYYY-MM-DD"
-                    placeholderTextColor="#94a3b8"
+                    placeholderTextColor={colors.cerulean[500]}
                     value={startDate}
                     onChangeText={setStartDate}
                     editable={!prescriptionSubmitting}
@@ -591,12 +773,12 @@ export default function PatientDetail() {
                     <TouchableOpacity
                       onPress={() => setShowPrescriptionDatePicker(!showPrescriptionDatePicker)}
                       disabled={prescriptionSubmitting}
-                      className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex-row justify-between items-center active:bg-slate-100"
+                      className="bg-papaya_whip-500 border border-papaya_whip-800 p-4 rounded-xl flex-row justify-between items-center active:opacity-80"
                     >
-                      <Text className={startDate ? "text-base text-slate-900 font-medium" : "text-base text-slate-400"}>
+                      <Text className={startDate ? "text-base text-cerulean-100 font-medium" : "text-base text-cerulean-500"}>
                         {startDate ? formatDateForDisplay(startDate) : "Select date"}
                       </Text>
-                      <Ionicons name="calendar-outline" size={20} color="#64748b" />
+                      <Ionicons name="calendar-outline" size={20} color={colors.cerulean[500]} />
                     </TouchableOpacity>
                     {showPrescriptionDatePicker && (
                       <DateTimePicker
@@ -623,33 +805,49 @@ export default function PatientDetail() {
                 onChangeText={setInstructions}
                 editable={!prescriptionSubmitting}
               />
-
-              <View className="flex-row gap-3 mt-8">
-                <TouchableOpacity
-                  onPress={closePrescriptionModal}
-                  className="flex-1 py-4 rounded-xl bg-slate-100 items-center active:bg-slate-200"
-                  disabled={prescriptionSubmitting}
-                >
-                  <Text className="text-slate-600 font-bold text-base">Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleAddPrescription}
-                  disabled={prescriptionSubmitting || !isPrescriptionValid}
-                  className={`flex-1 py-4 rounded-xl items-center justify-center shadow-sm shadow-cerulean-200 ${
-                    !isPrescriptionValid ? "bg-slate-200" : "bg-cerulean-600 active:bg-cerulean-700"
-                  }`}
-                >
-                  {prescriptionSubmitting ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text className={`font-bold text-base ${!isPrescriptionValid ? "text-slate-400" : "text-white"}`}>
-                      Add Prescription
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              </View>
             </ScrollView>
-          </KeyboardAvoidingView>
+            {/* Sticky action row so Add Prescription is always visible */}
+            <View className="flex-row justify-between items-center gap-3 px-6 pb-6 pt-2 bg-white border-t border-papaya_whip-800 flex-shrink-0">
+              <Pressable
+                onPress={closePrescriptionModal}
+                disabled={prescriptionSubmitting}
+                style={({ pressed }) => [
+                  { paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16, alignItems: "center", backgroundColor: colors.papaya_whip[400] },
+                  { opacity: pressed ? 0.8 : 1 },
+                ]}
+              >
+                <Text className="text-cerulean-600 font-bold text-base">Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleAddPrescription}
+                disabled={prescriptionSubmitting || !isPrescriptionValid}
+                style={({ pressed }) => [
+                  {
+                    paddingVertical: 14,
+                    paddingHorizontal: 24,
+                    borderRadius: 16,
+                    alignItems: "center",
+                    shadowRadius: 4,
+                    shadowOffset: { width: 0, height: 2 },
+                  },
+                  !isPrescriptionValid
+                    ? { backgroundColor: colors.cerulean[300], opacity: 0.8 }
+                    : { backgroundColor: colors.cerulean[500], shadowColor: colors.cerulean[500], shadowOpacity: 0.25, elevation: 2 },
+                  { opacity: pressed ? 0.8 : 1 },
+                ]}
+              >
+                {prescriptionSubmitting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text className={`font-bold text-base ${!isPrescriptionValid ? "text-cerulean-500" : "text-white"}`}>
+                    Add Prescription
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+            </View>
+            </KeyboardAvoidingView>
+          </View>
         </View>
       </Modal>
     </>
@@ -657,18 +855,35 @@ export default function PatientDetail() {
 }
 
 const styles = StyleSheet.create({
-  cardShadow: {
-    shadowColor: "#64748b",
+  headerShadow: {
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.15,
     shadowRadius: 12,
-    elevation: 3,
+    elevation: 10,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "transparent",
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(2, 21, 27, 0.4)",
+  },
+  modalSheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: "hidden",
   },
   modalShadow: {
-    shadowColor: "#0f172a",
+    shadowColor: colors.cerulean[100],
     shadowOffset: { width: 0, height: -8 },
     shadowOpacity: 0.1,
     shadowRadius: 24,
     elevation: 10,
   },
+  modalContent: { flex: 1, minHeight: 0 },
+  modalScroll: { flex: 1, minHeight: 0 },
 });

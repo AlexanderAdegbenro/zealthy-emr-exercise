@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
-import type { Database } from '../lib/database.types';
-import { supabase } from '../lib/supabase';
+import type { Database } from "@/src/lib/database.types";
+import { supabase } from "@/src/lib/supabase";
 
 type AppointmentRow = Database['public']['Tables']['appointments']['Insert'];
 type AppointmentUpdate = Database['public']['Tables']['appointments']['Update'];
@@ -27,11 +27,14 @@ export interface AppointmentInput {
 
 export interface PrescriptionInput {
   patient_id: string;
-  medication_id: string; // References the seeded medications table
+  medication_id: string;
   dosage: string;
+  /** Dashboard key: refill schedule (e.g. Daily, Weekly). */
+  refill_schedule: string;
+  /** Dashboard key: refill/start date (YYYY-MM-DD). */
+  refill_date: string;
+  /** Dashboard key: quantity (default 30). */
   quantity?: number;
-  frequency: string;
-  start_date: string;
   instructions?: string;
 }
 
@@ -120,6 +123,16 @@ export const adminService = {
     return { success: true };
   },
 
+  async deleteAppointment(id: string) {
+    if (!id) throw new Error("Missing Appointment ID");
+    const { error } = await supabase
+      .from('appointments')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    return { success: true };
+  },
+
   /**
    * PRESCRIPTIONS: Logic for assigning medications to patients.
    */
@@ -129,15 +142,23 @@ export const adminService = {
       medication_id: data.medication_id,
       dosage: data.dosage,
       quantity: data.quantity ?? 30,
-      refill_date: data.start_date,
-      refill_schedule: data.frequency, // mapping frequency to refill_schedule
-      instructions: data.instructions,
+      refill_date: data.refill_date,
+      refill_schedule: data.refill_schedule,
     };
     return await supabase
       .from('prescriptions')
       .insert(row as never)
       .select()
       .single();
+  },
+
+  async deletePrescription(prescriptionId: string) {
+    const { error } = await supabase
+      .from('prescriptions')
+      .delete()
+      .eq('id', prescriptionId);
+    if (error) throw error;
+    return { success: true };
   },
 
   /**

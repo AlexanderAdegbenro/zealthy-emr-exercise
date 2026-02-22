@@ -3,7 +3,7 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -11,10 +11,11 @@ import {
 } from "react-native";
 import { useRouter, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { FormInput } from "../../src/components/ui/FormInput";
-import { NewPatientSchema } from "../../src/lib/validations";
-import { adminService } from "../../src/services/adminService";
-import { zealthyAlert } from "../../src/utils/alerts";
+import { FormInput } from "@/src/components/ui/FormInput";
+import { NewPatientSchema } from "@/src/lib/validations";
+import { adminService } from "@/src/services/adminService";
+import { zealthyAlert } from "@/src/utils/alerts";
+import colors from "@/src/theme/colors.js";
 
 export default function NewPatientScreen() {
   const insets = useSafeAreaInsets();
@@ -69,15 +70,15 @@ export default function NewPatientScreen() {
 
   return (
     <View
-      className="flex-1 bg-slate-50"
+      className="flex-1 bg-papaya_whip-900"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
     >
       <Stack.Screen 
         options={{ 
           title: "New Patient",
-          headerStyle: { backgroundColor: "#f8fafc" }, // slate-50
+          headerStyle: { backgroundColor: colors.papaya_whip[900] },
           headerShadowVisible: false,
-          headerTintColor: "#0f172a", // slate-900
+          headerTintColor: colors.cerulean[100],
           headerTitleStyle: { fontWeight: "700", fontSize: 16 },
         }} 
       />
@@ -91,10 +92,11 @@ export default function NewPatientScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View className="border-b border-slate-200 pb-4 mb-6">
-            <Text className="text-sm font-bold text-slate-400 uppercase tracking-widest">
+          <View className="mb-6">
+            <Text className="text-xs font-bold text-cerulean-600 uppercase tracking-wider">
               Set login and profile
             </Text>
+            <View className="h-1.5 bg-bright_amber-400 rounded-full mt-2 w-12" />
           </View>
 
           <View className="mb-2">
@@ -147,28 +149,41 @@ export default function NewPatientScreen() {
             />
           </View>
 
-          <TouchableOpacity
+          <Pressable
             onPress={handleSubmit}
             disabled={isButtonDisabled}
-            activeOpacity={0.8}
-            className={`mt-8 p-5 rounded-2xl items-center shadow-sm ${
-              isButtonDisabled
-                ? "bg-slate-200 shadow-none"
-                : "bg-cerulean-600 shadow-cerulean-200"
-            }`}
+            style={({ pressed }) => [
+              {
+                marginTop: 32,
+                paddingVertical: 14,
+                paddingHorizontal: 24,
+                borderRadius: 100,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: isButtonDisabled ? colors.papaya_whip[400] : colors.cerulean[500],
+                shadowColor: isButtonDisabled ? "transparent" : colors.cerulean[500],
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: isButtonDisabled ? 0 : 0.25,
+                shadowRadius: 6,
+                elevation: isButtonDisabled ? 0 : 2,
+              },
+              { transform: [{ scale: pressed ? 0.97 : 1 }], opacity: pressed ? 0.9 : 1 },
+            ]}
           >
             {isSubmitting ? (
-              <ActivityIndicator color="white" />
+              <ActivityIndicator color="#fff" />
             ) : (
               <Text
-                className={`font-bold text-lg ${
-                  isButtonDisabled ? "text-slate-400" : "text-white"
-                }`}
+                style={{
+                  fontSize: 16,
+                  fontWeight: "700",
+                  color: isButtonDisabled ? colors.cerulean[500] : "#fff",
+                }}
               >
                 Create patient
               </Text>
             )}
-          </TouchableOpacity>
+          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
