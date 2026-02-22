@@ -1,45 +1,50 @@
-Act as a Senior React Native Engineer. We are building a mobile-first EMR and Patient Portal using Expo Router, NativeWind (Tailwind), Supabase, and TanStack React Query.
+Zealthy | High-Definition Patient Care Portal
+Zealthy is a high-performance EMR and Patient Portal designed to bridge the gap between complex medical data and a frictionless user experience. Built with a "Mobile-First" philosophy, it balances intuitive patient autonomy with a powerful, high-utility administrative suite.
 
-Below is the project's README, which contains the architectural decisions and current tech stack. Read it carefully to understand our constraints and philosophy.
+🚀 The Stack
+Framework: Expo (React Native) + Expo Router
 
---- START OF README CONTEXT ---
-# Zealthy Patient Portal & Mini-EMR
+Backend: Supabase (Auth, Postgres, Real-time sync)
 
-A full-stack React Native application (with web support via Expo) built for the Zealthy Mobile Engineering Exercise. This application features a Patient Portal for managing upcoming appointments and medication refills, and a Mini-EMR for administrative provider access.
+Styling: NativeWind (Tailwind CSS) for rapid, responsive UI
 
-## Tech Stack
-* **Frontend:** React Native, Expo (SDK 50+), Expo Router
-* **Backend:** Supabase (PostgreSQL, Authentication)
-* **State & Data Fetching:** TanStack React Query
-* **Styling:** NativeWind (Tailwind CSS)
-* **Type Safety:** TypeScript (End-to-End via Supabase CLI)
+Data Handling: TanStack Query (React Query) for robust state & caching
 
-## Architectural Decisions
-1. **File-Based Routing:** Uses Expo Router with `(patient)` and `(auth)` groups for guarded routes, while keeping the `admin/` directory unguarded per requirements.
-2. **Backend:** Supabase handles PostgreSQL and Auth. Triggers automatically sync `auth.users` to a `public.profiles` table. Row Level Security (RLS) is strictly enforced.
-3. **Serverless API:** Uses Expo API routes (`app/api/create-user+api.ts`) with the Supabase `service_role` key to securely bypass client constraints and manually set patient passwords during admin creation.
-4. **Data Fetching:** ALL data fetching must use custom TanStack React Query hooks to eliminate `useEffect` sprawl and handle caching gracefully. The QueryClient is already initialized in `app/_layout.tsx`.
-5. **Type Safety:** The frontend models are strictly typed using `src/types/database.types.ts` generated directly from the Supabase SQL schema.
---- END OF README CONTEXT ---
+Safety: Zod (Schema validation)
 
-### Current State:
-1. The routing scaffolding is complete.
-2. The database is live, seeded, and typed in `src/types/database.types.ts`.
-3. `<QueryClientProvider>` is wrapping the root `<Stack />` in `app/_layout.tsx`.
+UX: Expo Haptics & Local Auth integration
 
-### Phase 2 Execution Tasks:
-Please generate the code for the following sequential steps. Output the complete code for each file requested.
+Opens in a new window
+Shutterstock
+Explore
+💎 The "HD" Standard (UI/UX Highlights)
+I built Zealthy with a focus on High Definition—meaning every interaction is sharp, intentional, and high-contrast.
 
-**1. Auth Provider (`src/context/AuthProvider.tsx`):**
-Create a React Context provider that listens to Supabase `onAuthStateChange`. It should expose the current session, user, and `is_admin` status. Update `app/_layout.tsx` to wrap the app in this provider inside the QueryClientProvider.
+Zero-Strain Interface: Optimized using a deep Slate and Cerulean palette. It's not just about aesthetics; it's about making critical medical data legible in any lighting condition while reducing eye fatigue for staff.
 
-**2. Data Fetching Hooks (`src/services/api.ts`):**
-Write the custom React Query hooks using the Supabase client. Create hooks for:
-- `usePatients()`: Fetches all profiles where `is_admin = false`.
-- Use the generated types from `src/types/database.types.ts` to strictly type the Supabase responses.
+Timezone-Resilient Scheduling: I implemented a custom date engine to solve the notorious "UTC-shift" bug. Patient appointments remain accurate to their local time, ensuring no one misses a visit due to a server-side timezone offset.
 
-**3. The Admin Dashboard UI (`app/admin/index.tsx`):**
-Build the unguarded mini-EMR dashboard using NativeWind. It should use the `usePatients()` hook to display a list/table of patients. Include a skeleton loader while `isLoading` is true, and a clean error state if `isError` is true.
+Unified Design Language: A "Deep-Radius" header system creates a cohesive feel across the app. It provides an immediate visual cue to the user whether they are in the Patient view (approachable) or the Admin portal (command-focused).
 
-**4. The Login Screen (`app/(auth)/login.tsx` & `app/(patient)/_layout.tsx`):**
-Build the login UI using NativeWind with email/password inputs. Call Supabase `signInWithPassword`. Then, update the patient layout file to check the AuthProvider session; if the user is not logged in, immediately redirect them to `/login`.
+Tactile Feedback: Subtle haptic micro-interactions are baked into destructive actions like cancellations or deletions. It provides that extra layer of physical confirmation before making a permanent change.
+
+🛠️ Key Features
+For Patients
+At-a-Glance Dashboard: A proactive 7-day summary focusing on what matters most: upcoming visits and urgent medication refills.
+
+90-Day Refill Timeline: A clean, chronological breakdown of prescriptions to help patients manage long-term care without the guesswork.
+
+For Admins (Staff Portal)
+Optimized Directory: A high-speed "Last Name First" searchable index designed for real-world clinical use.
+
+Full-Cycle Care Management: Streamlined workflows to schedule recurring appointments or manage complex prescription dosages in seconds.
+
+⚙️ Quick Start
+Environment: Drop your EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY into a .env file.
+
+Install: npm install
+
+Launch: npx expo start
+
+Why this project exists
+Medical software is historically clunky and "faded." Zealthy is my take on what happens when you apply modern mobile standards—high contrast, snappy performance, and thoughtful UX—to the healthcare industry.

@@ -6,7 +6,6 @@ type AppointmentRow = Database['public']['Tables']['appointments']['Insert'];
 type AppointmentUpdate = Database['public']['Tables']['appointments']['Update'];
 type PrescriptionInsert = Database['public']['Tables']['prescriptions']['Insert'];
 
-// --- 1. TYPES & INTERFACES ---
 // Defining these here ensures your data layer remains predictable
 export interface PatientProfile {
   id: string;
@@ -45,7 +44,6 @@ export interface CreatePatientInput {
   last_name: string;
 }
 
-// --- 2. ADMIN SERVICE ---
 export const adminService = {
   
   /**

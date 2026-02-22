@@ -8,7 +8,6 @@ export default function Index() {
   const insets = useSafeAreaInsets();
   const { session, isAdmin, loading } = useAuth();
 
-  // --- Wait for AuthProvider to finish checking Supabase ---
   if (loading) {
     return (
       <View
@@ -23,7 +22,6 @@ export default function Index() {
     );
   }
 
-  // --- Traffic control ---
   if (session && isAdmin) {
     return <Redirect href="/admin" />;
   }

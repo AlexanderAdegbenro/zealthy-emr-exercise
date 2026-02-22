@@ -14,8 +14,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthActions } from "@/src/hooks/useAuthActions";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
+import colors from "@/src/theme/colors.js";
 
-// --- 1. ATOMIC COMPONENT: Reusable Form Input ---
 interface FormInputProps extends TextInputProps {
   label: string;
   errorMessage?: string; 
@@ -26,23 +26,22 @@ const FormInput = React.forwardRef<TextInput, FormInputProps>(
     const [isFocused, setIsFocused] = useState(false);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
-    // Dynamic border logic
+    // High Contrast Border Logic
     const borderColor = errorMessage
       ? "border-primary_scarlet-500"
       : isFocused
-      ? "border-cerulean-400"
-      : "border-papaya_whip-800"; 
+      ? "border-cerulean-600"
+      : "border-slate-200"; 
 
     return (
       <View className="mb-6">
         <Text 
-          className="text-slate-400 font-bold text-[10px] tracking-[2px] uppercase mb-2 ml-1"
-          accessibilityElementsHidden={true}
+          className="text-slate-900 font-black text-[10px] tracking-[2px] uppercase mb-2 ml-1"
         >
           {label}
         </Text>
         <View 
-          className={`relative bg-white border rounded-[20px] transition-colors ${borderColor}`}
+          className={`relative bg-white border-2 rounded-[24px] flex-row items-center ${borderColor}`}
         >
           <TextInput
             {...props}
@@ -56,22 +55,23 @@ const FormInput = React.forwardRef<TextInput, FormInputProps>(
               setIsFocused(false);
               onBlur?.(e);
             }}
-            className={`p-5 text-base text-cerulean-900 ${propsClassName || ""}`}
+            // pr-14 ensures text never overlaps the eye icon
+            className={`flex-1 p-5 text-base font-bold text-slate-900 pr-14 ${propsClassName || ""}`}
             placeholderTextColor="#94a3b8"
             accessibilityLabel={label}
           />
           
-          {/* Password Toggle Eye Icon */}
           {secureTextEntry && (
             <TouchableOpacity 
               onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-              className="absolute right-4 top-4"
+              className="absolute right-5"
               activeOpacity={0.7}
+              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
             >
               <Feather 
                 name={isPasswordVisible ? "eye" : "eye-off"} 
-                size={20} 
-                color="#086788" 
+                size={22} 
+                color={colors.cerulean[500]} 
               />
             </TouchableOpacity>
           )}
@@ -79,8 +79,7 @@ const FormInput = React.forwardRef<TextInput, FormInputProps>(
 
         {errorMessage && (
           <Text 
-            className="text-xs font-bold text-primary_scarlet-500 mt-2 ml-1"
-            accessibilityLiveRegion="polite"
+            className="text-xs font-black text-primary_scarlet-600 mt-2 ml-1 uppercase"
           >
             {errorMessage}
           </Text>
@@ -91,20 +90,16 @@ const FormInput = React.forwardRef<TextInput, FormInputProps>(
 );
 FormInput.displayName = "FormInput";
 
-
-// --- 2. MAIN SCREEN ---
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   
-  // Destructure 'error' to show login failures to the user
   const { login, isLoading, error } = useAuthActions(); 
   const router = useRouter(); 
 
   const passwordRef = useRef<TextInput>(null);
 
-  // --- 3. DERIVED STATE ---
   const isFormValid = email.trim().length > 0 && password.trim().length > 0;
   const isButtonDisabled = isLoading || !isFormValid;
 
@@ -119,33 +114,55 @@ export default function LoginScreen() {
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
         className="flex-1"
       >
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: "center",
+            paddingBottom: 320,
+          }}
           className="px-8"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header Section: Now with a Brand Icon */}
-          <View className="mb-12 items-center" accessible={true} accessibilityRole="header">
-            <View className="bg-cerulean-600 w-20 h-20 rounded-[24px] items-center justify-center shadow-xl mb-6">
-               <Feather name="activity" size={40} color="white" />
+          {/* Header Section */}
+          <View className="mb-14 items-center" accessible={true} accessibilityRole="header">
+            <View
+              className="bg-cerulean-600 w-24 h-24 rounded-[32px] items-center justify-center mb-8"
+              style={{
+                shadowColor: colors.cerulean[900],
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.35,
+                shadowRadius: 16,
+                elevation: 8,
+              }}
+            >
+              <Feather name="activity" size={48} color="white" />
             </View>
-            <Text className="text-5xl font-black text-cerulean-800 tracking-tighter">
+            <Text className="text-6xl font-black text-slate-900 tracking-tighter">
               Zealthy
             </Text>
-            <Text className="text-lg text-cerulean-400 font-semibold mt-1 tracking-wide">
-              Patient Care Portal
+            <Text className="text-xl text-cerulean-600 font-black mt-1 uppercase tracking-[3px]">
+              Care Portal
             </Text>
           </View>
 
           {/* Form Section */}
           <View>
-            {/* Global Error Notice */}
             {error && (
-              <View className="bg-primary_scarlet-900/30 p-4 rounded-2xl mb-6 border border-primary_scarlet-800">
-                <Text className="text-primary_scarlet-600 text-center font-bold text-sm">
+              <View
+                className="bg-primary_scarlet-600 p-5 rounded-[24px] mb-8"
+                style={{
+                  shadowColor: colors.primary_scarlet[900],
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 8,
+                  elevation: 6,
+                }}
+              >
+                <Text className="text-white text-center font-black text-sm uppercase">
                   {error}
                 </Text>
               </View>
@@ -177,40 +194,48 @@ export default function LoginScreen() {
             />
           </View>
 
-          {/* Action Button: Clean Tailwind refactor with dynamic state */}
+          {/* High-Visibility Sign In Button */}
           <TouchableOpacity
             onPress={handleLogin}
             disabled={isButtonDisabled}
-            activeOpacity={0.8}
+            activeOpacity={0.9}
             accessibilityRole="button"
-            accessibilityState={{ disabled: isButtonDisabled, busy: isLoading }}
-            className={`mt-6 py-5 rounded-full items-center shadow-lg transition-all ${
-              isButtonDisabled 
-                ? "bg-papaya_whip-400 shadow-none" 
-                : "bg-cerulean-600 shadow-cerulean-200"
+            className={`mt-6 py-6 rounded-[24px] items-center ${
+              isButtonDisabled ? "bg-slate-200" : "bg-bright_amber-500"
             }`}
+            style={
+              isButtonDisabled
+                ? {}
+                : {
+                    shadowColor: colors.bright_amber[400],
+                    shadowOffset: { width: 0, height: 8 },
+                    shadowOpacity: 0.4,
+                    shadowRadius: 16,
+                    elevation: 8,
+                  }
+            }
           >
             {isLoading ? (
-              <ActivityIndicator color="white" />
+              <ActivityIndicator color={colors.cerulean[100]} />
             ) : (
               <Text 
-                className={`text-lg font-black tracking-wide ${
-                  isButtonDisabled ? "text-papaya_whip-700" : "text-white"
+                className={`text-xl font-black uppercase tracking-[2px] ${
+                  isButtonDisabled ? "text-slate-400" : "text-cerulean-100"
                 }`}
               >
-                Sign In to Account
+                Sign In
               </Text>
             )}
           </TouchableOpacity>
 
-          {/* Admin access: Redesigned as a subtle text button */}
+          {/* Admin access */}
           <TouchableOpacity
             onPress={() => router.push("/admin" as any)}
             activeOpacity={0.6}
-            className="mt-12 py-4"
+            className="mt-32 py-4"
           >
             <Text className="text-center text-slate-400 font-bold text-xs tracking-[1px] uppercase">
-              Staff & EMR Portal: <Text className="text-cerulean-600 underline">Enter Here</Text>
+              Staff & EMR Portal: <Text className="text-cerulean-600 font-black underline">Enter Here</Text>
             </Text>
           </TouchableOpacity>
 
