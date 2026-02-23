@@ -2,6 +2,7 @@ import React from "react";
 import { TouchableOpacity, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import colors from "@/src/theme/colors.js";
+import { haptics } from "../../utils/haptics";
 
 interface ViewFullLinkProps {
   label: string;
@@ -13,9 +14,14 @@ interface ViewFullLinkProps {
  * Light blue background, text on left, arrow on the right.
  */
 export function ViewFullLink({ label, onPress }: ViewFullLinkProps) {
+  const handlePress = () => {
+    haptics.light();
+    onPress();
+  };
+
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={handlePress}
       activeOpacity={0.8}
       style={{
         flexDirection: "row",

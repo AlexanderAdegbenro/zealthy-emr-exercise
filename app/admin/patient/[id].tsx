@@ -23,13 +23,11 @@ import { StatusPill } from "@/src/components/ui/StatusPill";
 import { MedicalCard } from "@/src/components/ui/MedicalCard";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import colors from "@/src/theme/colors.js";
+import { platformShadow } from "@/src/utils/shadows";
+import { formatDateLocal } from "@/src/utils/dateHelpers";
 
-/** Parses YYYY-MM-DD as local date to avoid UTC timezone shift. */
-function formatDateLocal(isoDate: string, options: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" }): string {
-  const [y, m, d] = isoDate.split("T")[0].split("-").map(Number);
-  const date = new Date(y, m - 1, d);
-  return date.toLocaleDateString(undefined, options);
-}
+import { haptics } from "@/src/utils/haptics";
+
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -38,7 +36,8 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
 export default function PatientDetail() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams();
+  const id = Array.isArray(params.id) ? params.id[0] : (params.id as string | undefined);
   
   const queryClient = useQueryClient();
   const { data: appointments, isLoading: appointmentsLoading, refetch: refetchAppointments } = useAppointments(id || "");
@@ -83,6 +82,7 @@ export default function PatientDetail() {
   }, [id]);
 
   const onRefresh = useCallback(async () => {
+    haptics.selection();
     setRefreshing(true);
     await Promise.all([fetchHistory(), refetchAppointments()]);
     setRefreshing(false);
@@ -92,6 +92,7 @@ export default function PatientDetail() {
 
   // Handle Logic Helpers (Delete/Add)
   const handleDeleteAppointment = (appointmentId: string) => {
+    haptics.heavy();
     Alert.alert("Cancel?", "Delete this appointment?", [
       { text: "No", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: async () => {
@@ -111,6 +112,7 @@ export default function PatientDetail() {
       status: "scheduled",
     }, {
       onSuccess: () => {
+        haptics.success();
         setAppointmentModalVisible(false);
         queryClient.invalidateQueries({ queryKey: ["appointments", id] });
       }
@@ -131,15 +133,18 @@ export default function PatientDetail() {
     });
     setPrescriptionSubmitting(false);
     if (!error) {
+      haptics.success();
       await fetchHistory();
       setPrescriptionModalVisible(false);
       zealthyAlert("Success", "Prescription added.");
     } else {
+      haptics.error();
       zealthyAlert("Error", error.message ?? "Failed to add prescription.");
     }
   };
 
   const handleDeletePrescription = (prescriptionId: string) => {
+    haptics.heavy();
     Alert.alert("Remove Medication?", "Delete this prescription?", [
       { text: "Cancel", style: "cancel" },
       {
@@ -186,20 +191,8 @@ export default function PatientDetail() {
 
   const patientName = data ? `${data.first_name} ${data.last_name}` : "Patient Detail";
 
-  const fabShadow = {
-    shadowColor: "#06536c",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
-    elevation: 14,
-  };
-  const fabShadowAmber = {
-    shadowColor: "#615103",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 14,
-  };
+  const fabShadow = platformShadow({ color: "#06536c", offsetY: 10, blur: 20, opacity: 0.35, elevation: 14 });
+  const fabShadowAmber = platformShadow({ color: "#615103", offsetY: 10, blur: 20, opacity: 0.4, elevation: 14 });
 
   return (
     <View className="flex-1 bg-papaya_whip-900">
@@ -208,14 +201,7 @@ export default function PatientDetail() {
       {/* 1. ADMIN HD HEADER - match directory */}
       <View
         className="bg-cerulean-600 rounded-b-[48px] px-8 pb-10"
-        style={{
-          paddingTop: insets.top + 20,
-          shadowColor: colors.cerulean[900],
-          shadowOffset: { width: 0, height: 16 },
-          shadowOpacity: 0.4,
-          shadowRadius: 24,
-          elevation: 20,
-        }}
+        style={[{ paddingTop: insets.top + 20 }, platformShadow({ color: colors.cerulean[900], offsetY: 16, blur: 24, opacity: 0.4, elevation: 20 })]}
       >
         <View className="flex-row items-center justify-between mb-6">
           <TouchableOpacity onPress={() => router.back()} className="bg-white/10 w-10 h-10 rounded-xl items-center justify-center">
@@ -233,10 +219,17 @@ export default function PatientDetail() {
       </View>
 
       <ScrollView 
-        className="flex-1"
+        style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.cerulean[500]]} tintColor={colors.cerulean[500]} />}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            colors={Platform.OS === "android" ? [colors.cerulean[500]] : undefined} 
+            tintColor={colors.cerulean[500]} 
+          />
+        }
       >
         <View className="px-6">
           {/* Section: Appointments */}
@@ -304,14 +297,10 @@ export default function PatientDetail() {
           bottom: 24 + insets.bottom,
           right: 24,
           backgroundColor: "rgba(255,255,255,0.92)",
-          shadowColor: "#06536c",
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.12,
-          shadowRadius: 24,
-          elevation: 8,
+          ...platformShadow({ color: "#06536c", offsetY: 8, blur: 24, opacity: 0.12, elevation: 8 }),
         }}
       >
-        <TouchableOpacity onPress={() => setAppointmentModalVisible(true)} activeOpacity={0.85} className="items-center">
+        <TouchableOpacity onPress={() => { haptics.medium(); setAppointmentModalVisible(true); }} activeOpacity={0.85} className="items-center">
           <View
             className="w-[68px] h-[68px] rounded-[20px] items-center justify-center border-2"
             style={[
@@ -326,7 +315,7 @@ export default function PatientDetail() {
           </View>
           <Text className="text-turquoise_surf-500 font-black text-[11px] uppercase tracking-wider mt-2.5">Schedule</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={openPrescriptionModal} activeOpacity={0.85} className="items-center">
+        <TouchableOpacity onPress={() => { haptics.medium(); openPrescriptionModal(); }} activeOpacity={0.85} className="items-center">
           <View
             className="w-[68px] h-[68px] rounded-[20px] items-center justify-center border-2"
             style={[
@@ -390,7 +379,7 @@ export default function PatientDetail() {
               </View>
             ) : (
               <ScrollView
-                className="px-6"
+                style={{ paddingHorizontal: 24 }}
                 contentContainerStyle={{ paddingBottom: 24 }}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"

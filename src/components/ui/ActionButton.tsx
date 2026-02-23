@@ -1,5 +1,6 @@
 import React from "react";
 import { Pressable, Text } from "react-native";
+import { haptics } from "../../utils/haptics";
 
 export type ActionButtonVariant = "danger" | "primary";
 
@@ -27,9 +28,18 @@ export function ActionButton({
   label,
   variant = "primary",
 }: ActionButtonProps) {
+  const handlePress = () => {
+    if (variant === 'danger') {
+      haptics.heavy();
+    } else {
+      haptics.medium();
+    }
+    onPress();
+  };
+
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handlePress}
       className={({ pressed }) =>
         `rounded-lg px-4 py-2.5 ${variantBg[variant]} ${pressed ? "opacity-80" : ""}`
       }

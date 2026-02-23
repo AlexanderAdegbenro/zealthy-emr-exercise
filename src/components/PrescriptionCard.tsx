@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
+import { platformShadow } from "@/src/utils/shadows";
 import { Ionicons } from "@expo/vector-icons";
 
 interface PrescriptionCardProps {
@@ -12,13 +13,7 @@ interface PrescriptionCardProps {
   onDelete?: () => void;
 }
 
-const cardShadow = {
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 12 },
-  shadowOpacity: 0.1,
-  shadowRadius: 25,
-  elevation: 12,
-};
+const cardShadow = platformShadow({ color: "#000000", offsetY: 12, blur: 25, opacity: 0.1, elevation: 12 });
 
 export function PrescriptionCard({
   medicationName,

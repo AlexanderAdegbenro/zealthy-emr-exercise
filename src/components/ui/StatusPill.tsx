@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text } from "react-native";
+import { platformShadow } from "@/src/utils/shadows";
 
 export type StatusPillVariant = "info" | "warning" | "success" | "default";
 
@@ -23,11 +24,7 @@ const textStyles: Record<StatusPillVariant, string> = {
 };
 
 const pillStyle = {
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.08,
-  shadowRadius: 2,
-  elevation: 2,
+  ...platformShadow({ color: "#000000", offsetY: 1, blur: 2, opacity: 0.08, elevation: 2 }),
   borderWidth: 0,
 };
 

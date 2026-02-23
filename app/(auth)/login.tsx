@@ -15,6 +15,7 @@ import { useAuthActions } from "@/src/hooks/useAuthActions";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import colors from "@/src/theme/colors.js";
+import { platformShadow } from "@/src/utils/shadows";
 
 interface FormInputProps extends TextInputProps {
   label: string;
@@ -121,14 +122,7 @@ export default function LoginScreen() {
       {/* Premium cerulean header - matches Directory style */}
       <View
         className="bg-cerulean-600 rounded-b-[48px] px-8 pb-12 items-center"
-        style={{
-          paddingTop: insets.top + 24,
-          shadowColor: colors.cerulean[900],
-          shadowOffset: { width: 0, height: 16 },
-          shadowOpacity: 0.35,
-          shadowRadius: 24,
-          elevation: 20,
-        }}
+        style={[{ paddingTop: insets.top + 24 }, platformShadow({ color: colors.cerulean[900], offsetY: 16, blur: 24, opacity: 0.35, elevation: 20 })]}
         accessible
         accessibilityRole="header"
       >
@@ -167,26 +161,12 @@ export default function LoginScreen() {
           {/* Form card - Directory-style white card */}
           <View
             className="bg-white rounded-[32px] p-6 mb-6"
-            style={{
-              shadowColor: colors.cerulean[300],
-              shadowOffset: { width: 0, height: 12 },
-              shadowOpacity: 0.12,
-              shadowRadius: 24,
-              elevation: 12,
-              borderWidth: 1,
-              borderColor: colors.papaya_whip[800],
-            }}
+            style={[platformShadow({ color: colors.cerulean[300], offsetY: 12, blur: 24, opacity: 0.12, elevation: 12 }), { borderWidth: 1, borderColor: colors.papaya_whip[800] }]}
           >
             {error && (
               <View
                 className="bg-primary_scarlet-500 p-4 rounded-[20px] mb-6"
-                style={{
-                  shadowColor: colors.primary_scarlet[900],
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 8,
-                  elevation: 6,
-                }}
+                style={platformShadow({ color: colors.primary_scarlet[900], offsetY: 4, blur: 8, opacity: 0.2, elevation: 6 })}
               >
                 <Text className="text-white text-center font-bold text-sm">
                   {error}
@@ -232,13 +212,7 @@ export default function LoginScreen() {
               paddingVertical: 20,
               borderRadius: 24,
               alignItems: "center",
-              ...(isButtonDisabled ? {} : {
-                shadowColor: colors.bright_amber[400],
-                shadowOffset: { width: 0, height: 10 },
-                shadowOpacity: 0.45,
-                shadowRadius: 20,
-                elevation: 10,
-              }),
+              ...(isButtonDisabled ? {} : platformShadow({ color: colors.bright_amber[400], offsetY: 10, blur: 20, opacity: 0.45, elevation: 10 })),
             }}
           >
             {isLoading ? (

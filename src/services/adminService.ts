@@ -169,24 +169,17 @@ export const adminService = {
     return await supabase
       .from('profiles')
       .select(`
-      *,
-      appointments(
-        id, 
-        first_appointment_date, 
-        provider_name, 
-        status, 
-        repeat_schedule
-      ),
-      prescriptions(
-        id, 
-        medication_id, 
-        dosage, 
-        quantity,
-        refill_schedule, 
-        refill_date,
-        medications(name)
-      )
-    `)
+        *,
+        prescriptions(
+          id,
+          medication_id,
+          dosage,
+          quantity,
+          refill_schedule,
+          refill_date,
+          medications(name)
+        )
+      `)
       .eq('id', patientId)
       .single();
   }

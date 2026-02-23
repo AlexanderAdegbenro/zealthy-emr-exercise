@@ -1,42 +1,53 @@
-import React, { useState, useRef } from "react";
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import React from "react";
+import { View, Text, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from "react-native";
 import { useRouter, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { FormInput } from "@/src/components/ui/FormInput";
 import { NewPatientSchema } from "@/src/lib/validations";
 import { adminService } from "@/src/services/adminService";
 import { zealthyAlert } from "@/src/utils/alerts";
+import { haptics } from "@/src/utils/haptics";
+import { platformShadow } from "@/src/utils/shadows";
 import colors from "@/src/theme/colors.js";
+
+type NewPatientFormValues = z.infer<typeof NewPatientSchema>;
+
+const buttonActiveShadow = platformShadow({ color: colors.bright_amber[400], offsetY: 8, blur: 16, opacity: 0.4, elevation: 8 });
 
 export default function NewPatientScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [form, setForm] = useState({ first_name: "", last_name: "", email: "", password: "" });
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const lastNameRef = useRef<TextInput>(null);
-  const emailRef = useRef<TextInput>(null);
-  const passwordRef = useRef<TextInput>(null);
+  const {
+    control,
+    handleSubmit,
+    setFocus,
+    formState: { isSubmitting, isValid },
+  } = useForm<NewPatientFormValues>({
+    resolver: zodResolver(NewPatientSchema),
+    mode: "onChange",
+    defaultValues: {
+      first_name: "",
+      last_name: "",
+      email: "",
+      password: "",
+    },
+  });
 
-  const isFormValid = Object.values(form).every(v => v.trim().length > 0);
-
-  const handleSubmit = async () => {
-    if (!isFormValid || isSubmitting) return;
-    const validation = NewPatientSchema.safeParse(form);
-
-    if (!validation.success) {
-      zealthyAlert("Validation Error", validation.error.issues[0].message);
-      return;
-    }
-
-    setIsSubmitting(true);
-    const { error } = await adminService.createPatient(validation.data);
-    setIsSubmitting(false);
+  const onSubmit = async (data: NewPatientFormValues) => {
+    haptics.medium();
+    const { error } = await adminService.createPatient(data);
 
     if (error) {
-      zealthyAlert("Registration Failed", error);
+      haptics.error();
+      zealthyAlert("Registration Failed", error || "An error occurred");
       return;
     }
+    
+    haptics.success();
     zealthyAlert("Success", "Patient record created successfully.");
     router.back();
   };
@@ -47,9 +58,9 @@ export default function NewPatientScreen() {
         options={{
           headerTitle: "Register Patient",
           headerTitleStyle: {
-            fontWeight: "900" as const,
+            fontWeight: "900",
             fontSize: 20,
-            color: colors.cerulean[100]
+            color: colors.cerulean[100],
           },
           headerStyle: { backgroundColor: colors.papaya_whip[900] },
           headerShadowVisible: false,
@@ -62,84 +73,107 @@ export default function NewPatientScreen() {
         className="flex-1"
       >
         <ScrollView
-          contentContainerStyle={{ padding: 24, paddingBottom: insets.bottom + 320 }}
+          contentContainerStyle={{ padding: 24, paddingBottom: insets.bottom + 120 }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Section Label: High Contrast */}
           <Text className="text-cerulean-100 font-black text-xs uppercase tracking-[2px] mb-8">
             Identity & Authentication
           </Text>
 
-          <FormInput 
-            label="First Name" 
-            placeholder="John" 
-            value={form.first_name} 
-            onChangeText={(t) => setForm({...form, first_name: t})} 
-            returnKeyType="next"
-            onSubmitEditing={() => lastNameRef.current?.focus()}
+          <Controller
+            control={control}
+            name="first_name"
+            render={({ field: { onChange, onBlur, value, ref }, fieldState: { error } }) => (
+              <View>
+                <FormInput
+                  ref={ref}
+                  label="First Name"
+                  placeholder="John"
+                  value={value}
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  returnKeyType="next"
+                  onSubmitEditing={() => setFocus("last_name")}
+                />
+                {error && <Text style={styles.errorText}>{error.message}</Text>}
+              </View>
+            )}
           />
 
-          <FormInput 
-            ref={lastNameRef}
-            label="Last Name" 
-            placeholder="Doe" 
-            value={form.last_name} 
-            onChangeText={(t) => setForm({...form, last_name: t})} 
-            returnKeyType="next"
-            onSubmitEditing={() => emailRef.current?.focus()}
+          <Controller
+            control={control}
+            name="last_name"
+            render={({ field: { onChange, onBlur, value, ref }, fieldState: { error } }) => (
+              <View>
+                <FormInput
+                  ref={ref}
+                  label="Last Name"
+                  placeholder="Doe"
+                  value={value}
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  returnKeyType="next"
+                  onSubmitEditing={() => setFocus("email")}
+                />
+                {error && <Text style={styles.errorText}>{error.message}</Text>}
+              </View>
+            )}
           />
 
-          <FormInput 
-            ref={emailRef}
-            label="Email Address" 
-            placeholder="patient@example.com" 
-            value={form.email} 
-            onChangeText={(t) => setForm({...form, email: t})} 
-            keyboardType="email-address"
-            returnKeyType="next"
-            onSubmitEditing={() => passwordRef.current?.focus()}
+          <Controller
+            control={control}
+            name="email"
+            render={({ field: { onChange, onBlur, value, ref }, fieldState: { error } }) => (
+              <View>
+                <FormInput
+                  ref={ref}
+                  label="Email Address"
+                  placeholder="patient@example.com"
+                  value={value}
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  keyboardType="email-address"
+                  returnKeyType="next"
+                  onSubmitEditing={() => setFocus("password")}
+                />
+                {error && <Text style={styles.errorText}>{error.message}</Text>}
+              </View>
+            )}
           />
 
-          <FormInput 
-            ref={passwordRef}
-            label="Temporary Password" 
-            placeholder="••••••••" 
-            value={form.password} 
-            onChangeText={(t) => setForm({...form, password: t})} 
-            secureTextEntry
+          <Controller
+            control={control}
+            name="password"
+            render={({ field: { onChange, onBlur, value, ref }, fieldState: { error } }) => (
+              <View>
+                <FormInput
+                  ref={ref}
+                  label="Temporary Password"
+                  placeholder="••••••••"
+                  value={value}
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  secureTextEntry
+                  returnKeyType="done"
+                  onSubmitEditing={handleSubmit(onSubmit)}
+                />
+                {error && <Text style={styles.errorText}>{error.message}</Text>}
+              </View>
+            )}
           />
 
-          {/* Action Button: Punchy & Bold */}
           <TouchableOpacity
-            onPress={handleSubmit}
-            disabled={!isFormValid || isSubmitting}
+            onPress={handleSubmit(onSubmit)}
+            disabled={!isValid || isSubmitting}
             activeOpacity={0.9}
             className="mt-10 py-6 rounded-[24px] items-center"
-            style={
-              isFormValid && !isSubmitting
-                ? {
-                    backgroundColor: colors.bright_amber[500],
-                    shadowColor: colors.bright_amber[400],
-                    shadowOffset: { width: 0, height: 8 },
-                    shadowOpacity: 0.4,
-                    shadowRadius: 16,
-                    elevation: 8,
-                  }
-                : { backgroundColor: "#e2e8f0" }
-            }
+            style={[styles.buttonBase, isValid && !isSubmitting ? styles.buttonActive : styles.buttonDisabled, isValid && !isSubmitting ? buttonActiveShadow : null]}
           >
             {isSubmitting ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text
-                style={{
-                  fontSize: 20,
-                  fontWeight: "900",
-                  color: isFormValid ? colors.cerulean[100] : "#94a3b8",
-                }}
-                className="uppercase tracking-widest"
-              >
+              <Text style={[styles.buttonText, { color: isValid ? colors.cerulean[100] : "#94a3b8" }]}>
                 Create Record
               </Text>
             )}
@@ -149,3 +183,29 @@ export default function NewPatientScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  errorText: {
+    color: colors.primary_scarlet[500],
+    fontSize: 12,
+    marginTop: -10,
+    marginBottom: 10,
+    marginLeft: 4,
+    fontWeight: "600",
+  },
+  buttonBase: {
+    backgroundColor: "#e2e8f0",
+  },
+  buttonActive: {
+    backgroundColor: colors.bright_amber[500],
+  },
+  buttonDisabled: {
+    backgroundColor: "#e2e8f0",
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: "900",
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+  },
+});

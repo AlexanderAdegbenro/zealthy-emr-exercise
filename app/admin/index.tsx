@@ -1,11 +1,14 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, StyleSheet } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Platform } from "react-native";
 import { useRouter, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { adminService } from "@/src/services/adminService";
 import { MedicalCard } from "@/src/components/ui/MedicalCard";
 import colors from "@/src/theme/colors.js";
+
+import { haptics } from "@/src/utils/haptics";
+import { platformShadow } from "@/src/utils/shadows";
 
 interface Patient {
   id: string;
@@ -35,6 +38,7 @@ export default function AdminDashboard() {
   }, []);
 
   const onRefresh = useCallback(() => {
+    haptics.selection();
     setRefreshing(true);
     fetchPatients();
   }, [fetchPatients]);
@@ -48,7 +52,7 @@ export default function AdminDashboard() {
       {/* 1. REFACTORED COMMAND HEADER */}
       <View
         className="bg-cerulean-600 rounded-b-[48px] px-8 pb-10"
-        style={[styles.headerShadow, { paddingTop: insets.top + 20 }]}
+        style={[headerShadow, { paddingTop: insets.top + 20 }]}
       >
         {/* TOP ROW: Title & Subtitle (Left) + Close Button (Right) */}
         <View className="flex-row justify-between items-start">
@@ -62,7 +66,10 @@ export default function AdminDashboard() {
           </View>
 
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => {
+              haptics.medium();
+              router.back();
+            }}
             className="bg-white/20 w-12 h-12 rounded-2xl items-center justify-center"
             accessibilityLabel="Close directory"
             accessibilityRole="button"
@@ -87,7 +94,7 @@ export default function AdminDashboard() {
                 refreshing={refreshing} 
                 onRefresh={onRefresh} 
                 tintColor={colors.cerulean[600]} 
-                colors={[colors.cerulean[600]]}
+                colors={Platform.OS === "android" ? [colors.cerulean[600]] : undefined}
             />
           }
         >
@@ -99,7 +106,10 @@ export default function AdminDashboard() {
             patients.map((item) => (
               <TouchableOpacity 
                 key={item.id} 
-                onPress={() => router.push(`/admin/patient/${item.id}` as any)}
+                onPress={() => {
+                  haptics.light();
+                  router.push(`/admin/patient/${item.id}` as any);
+                }}
                 activeOpacity={0.9}
               >
                 <MedicalCard className="mb-4">
@@ -128,12 +138,15 @@ export default function AdminDashboard() {
 
       {/* FAB: New Patient - bottom right */}
       <TouchableOpacity
-        onPress={() => router.push("/admin/new-patient" as any)}
+        onPress={() => {
+          haptics.medium();
+          router.push("/admin/new-patient" as any);
+        }}
         activeOpacity={0.85}
         accessibilityLabel="Add new patient"
         accessibilityRole="button"
         className="absolute flex-row items-center justify-center rounded-full"
-        style={{
+        style={[{
           position: "absolute",
           right: 24,
           bottom: 24 + insets.bottom,
@@ -141,12 +154,7 @@ export default function AdminDashboard() {
           borderRadius: 100,
           paddingHorizontal: 20,
           paddingVertical: 18,
-          shadowColor: colors.bright_amber[600],
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.4,
-          shadowRadius: 12,
-          elevation: 10,
-        }}
+        }, fabShadow]}
       >
         <View className="flex-row items-center" style={{ minWidth: 140, justifyContent: "space-between" }}>
           <Text
@@ -163,19 +171,5 @@ export default function AdminDashboard() {
   );
 }
 
-const styles = StyleSheet.create({
-  headerShadow: {
-    shadowColor: colors.cerulean[900],
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 20,
-  },
-  yellowButtonShadow: {
-    shadowColor: colors.bright_amber[600],
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 8,
-  }
-});
+const headerShadow = platformShadow({ color: colors.cerulean[900], offsetY: 16, blur: 24, opacity: 0.2, elevation: 20 });
+const fabShadow = platformShadow({ color: colors.bright_amber[600], offsetY: 8, blur: 12, opacity: 0.4, elevation: 10 });
