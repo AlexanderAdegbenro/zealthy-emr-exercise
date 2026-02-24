@@ -52,7 +52,7 @@ export const adminService = {
    */
   async createPatient(data: CreatePatientInput): Promise<{ data: { id: string } | null; error: string | null }> {
     try {
-      // Snapshot admin session before signUp hijacks it
+      // Snapshot admin session before signUp replaces it with the new patient's session
       const { data: sessionData } = await supabase.auth.getSession();
       const adminSession = sessionData?.session;
 
@@ -78,25 +78,11 @@ export const adminService = {
       if (authError) throw authError;
       if (!authData.user?.id) throw new Error('User creation failed');
 
-      // Upsert guards against duplicate-profile errors if a DB trigger already fired
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert(
-          {
-            id: authData.user.id,
-            email: data.email.trim(),
-            first_name: data.first_name.trim(),
-            last_name: data.last_name.trim(),
-            is_admin: false,
-          } as any,
-          { onConflict: 'id' }
-        );
-
-      if (profileError) throw profileError;
+      // Profile is handled by the DB trigger on auth.users insert
 
       return { data: { id: authData.user.id }, error: null };
     } catch (err: any) {
-      return { data: null, error: err.message || 'Failed to create patient' };
+      return { data: null, error: err.message || 'An unexpected error occurred' };
     }
   },
   /**
