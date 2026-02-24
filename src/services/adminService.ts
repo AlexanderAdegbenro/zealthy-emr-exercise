@@ -51,27 +51,54 @@ export const adminService = {
    * Requires EXPO_PUBLIC_APP_URL (or same-origin on web) for API route.
    */
   async createPatient(data: CreatePatientInput): Promise<{ data: { id: string } | null; error: string | null }> {
-    const base =
-      Platform.OS === 'web' && typeof window !== 'undefined'
-        ? ''
-        : (process.env.EXPO_PUBLIC_APP_URL ?? 'http://localhost:8081');
-    const res = await fetch(`${base}/api/create-user`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    try {
+      // Snapshot admin session before signUp hijacks it
+      const { data: sessionData } = await supabase.auth.getSession();
+      const adminSession = sessionData?.session;
+
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email.trim(),
         password: data.password,
-        first_name: data.first_name.trim(),
-        last_name: data.last_name.trim(),
-      }),
-    });
-    const json = await res.json();
-    if (!res.ok) {
-      return { data: null, error: json.error ?? 'Failed to create patient' };
-    }
-    return { data: { id: json.id }, error: null };
-  },
+        options: {
+          data: {
+            first_name: data.first_name.trim(),
+            last_name: data.last_name.trim(),
+          },
+        },
+      });
 
+      // Restore admin session immediately — signUp swaps it to the new patient
+      if (adminSession) {
+        await supabase.auth.setSession({
+          access_token: adminSession.access_token,
+          refresh_token: adminSession.refresh_token,
+        });
+      }
+
+      if (authError) throw authError;
+      if (!authData.user?.id) throw new Error('User creation failed');
+
+      // Upsert guards against duplicate-profile errors if a DB trigger already fired
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert(
+          {
+            id: authData.user.id,
+            email: data.email.trim(),
+            first_name: data.first_name.trim(),
+            last_name: data.last_name.trim(),
+            is_admin: false,
+          } as any,
+          { onConflict: 'id' }
+        );
+
+      if (profileError) throw profileError;
+
+      return { data: { id: authData.user.id }, error: null };
+    } catch (err: any) {
+      return { data: null, error: err.message || 'Failed to create patient' };
+    }
+  },
   /**
    * PATIENTS: Fetches all registered profiles that are not administrators.
    */
