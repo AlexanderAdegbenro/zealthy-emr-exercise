@@ -9,7 +9,7 @@ import { ViewFullLink } from "@/src/components/ui/ViewFullLink";
 import { StatusPill } from "@/src/components/ui/StatusPill";
 import { haptics } from "@/src/utils/haptics";
 import { platformShadow } from "@/src/utils/shadows";
-import { usePatientDashboard, DashboardAppointment, DashboardPrescription } from "../../src/hooks/patient/usePatientDashboard"; // IMPORT THE NEW HOOK
+import { usePatientDashboard, DashboardAppointment, DashboardPrescription } from "../../src/hooks/patient/usePatientDashboard";
 
 const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
 
@@ -24,7 +24,6 @@ export default function PatientDashboard() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   
-  // Look how clean this is! One line to get all our data and states.
   const { profile, appointments, prescriptions, isLoading, isRefetching, error, refetch } = usePatientDashboard();
 
   const onRefresh = () => {

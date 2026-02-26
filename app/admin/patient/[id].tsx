@@ -44,18 +44,15 @@ export default function PatientDetail() {
   const { mutate: createAppointment } = useCreateAppointment();
   const [refreshing, setRefreshing] = useState(false);
 
-  // Patient Data State
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const isLoading = loading || appointmentsLoading;
 
-  // Appointment Modal State
   const [appointmentModalVisible, setAppointmentModalVisible] = useState(false);
   const [providerName, setProviderName] = useState("");
   const [firstAppointmentDate, setFirstAppointmentDate] = useState("");
   const [repeatSchedule] = useState<"none" | "weekly" | "monthly">("none");
 
-  // Prescription Modal State
   const [prescriptionModalVisible, setPrescriptionModalVisible] = useState(false);
   const [medications, setMedications] = useState<{ id: string; name: string; available_dosages: string[] }[]>([]);
   const [medicationsLoading, setMedicationsLoading] = useState(false);
@@ -90,7 +87,6 @@ export default function PatientDetail() {
 
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
 
-  // Handle Logic Helpers (Delete/Add)
   const handleDeleteAppointment = (appointmentId: string) => {
     haptics.heavy();
     Alert.alert("Cancel?", "Delete this appointment?", [
@@ -198,7 +194,6 @@ export default function PatientDetail() {
     <View className="flex-1 bg-papaya_whip-900">
       <Stack.Screen options={{ headerShown: false }} />
       
-      {/* 1. ADMIN HD HEADER - match directory */}
       <View
         className="bg-cerulean-600 rounded-b-[48px] px-8 pb-10"
         style={[{ paddingTop: insets.top + 20 }, platformShadow({ color: colors.cerulean[900], offsetY: 16, blur: 24, opacity: 0.4, elevation: 20 })]}
@@ -232,7 +227,6 @@ export default function PatientDetail() {
         }
       >
         <View className="px-6">
-          {/* Section: Appointments */}
           <Text className="text-slate-900 font-black text-xs uppercase tracking-[2px] mb-4 mt-10 px-2">Upcoming Visits</Text>
           {appointments && appointments.length > 0 ? (
             appointments.map((apt: any) => (
@@ -260,7 +254,6 @@ export default function PatientDetail() {
             </View>
           )}
 
-          {/* Section: Prescriptions */}
           <Text className="text-slate-900 font-black text-xs uppercase tracking-[2px] mb-4 mt-10 px-2">Active Meds</Text>
           {data?.prescriptions?.length > 0 ? (
             data.prescriptions.map((rx: any) => (
@@ -290,7 +283,6 @@ export default function PatientDetail() {
         </View>
       </ScrollView>
 
-      {/* 2. FABs - differentiated actions with Zealthy accents */}
       <View
         className="absolute flex-row gap-6 items-end px-4 py-3 rounded-[28px]"
         style={{
@@ -332,7 +324,6 @@ export default function PatientDetail() {
         </TouchableOpacity>
       </View>
 
-      {/* Appointment Modal */}
       <Modal visible={appointmentModalVisible} animationType="slide" transparent>
         <View className="flex-1 justify-end bg-slate-900/40">
           <View className="bg-white rounded-t-[40px] p-8 pb-12" style={{ paddingBottom: insets.bottom + 32 }}>
@@ -366,7 +357,6 @@ export default function PatientDetail() {
         </View>
       </Modal>
 
-      {/* Prescription Modal */}
       <Modal visible={prescriptionModalVisible} animationType="slide" transparent>
         <View className="flex-1 justify-end bg-slate-900/40">
           <View className="bg-white rounded-t-[40px] max-h-[90%]" style={{ paddingBottom: insets.bottom + 32 }}>

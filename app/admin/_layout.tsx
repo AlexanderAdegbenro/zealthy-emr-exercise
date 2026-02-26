@@ -14,26 +14,17 @@ const headerOptions = {
   headerBackTitleVisible: false,
 };
 
+/** Admin stack: no auth gate so staff can open portal without logging in (per product requirement). */
 export default function AdminLayout() {
-  // Authentication check is purposefully omitted per requirements.
-  
   return (
     <Stack screenOptions={headerOptions}>
-      {/* Search/Directory Screen */}
       <Stack.Screen
         name="index"
-        options={{
-          title: "Patient Directory",
-        }}
+        options={{ title: "Patient Directory" }}
       />
-      
-      {/* Detail Screen */}
       <Stack.Screen
         name="patient/[id]"
-        options={{
-          headerShown: false, // We'll use our custom deep-radius header here
-          animation: "slide_from_right", // High-end transition feel
-        }}
+        options={{ headerShown: false, animation: "slide_from_right" }}
       />
     </Stack>
   );

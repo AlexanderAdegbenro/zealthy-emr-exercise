@@ -25,7 +25,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let isMounted = true; // Prevents state updates on unmounted components
+    let isMounted = true; // avoid setState after unmount (e.g. nav away during getSession)
 
     const getSession = async () => {
       try {
@@ -49,14 +49,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       } catch (e) {
         console.warn("Session verification error:", e);
-        // If anything fails, safely reset state instead of hanging
         if (isMounted) {
           setSession(null);
           setUser(null);
           setIsAdmin(false);
         }
       } finally {
-        // This GUARANTEES the loading screen will be dismissed
         if (isMounted) setLoading(false); 
       }
     };

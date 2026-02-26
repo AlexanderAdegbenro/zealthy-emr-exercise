@@ -27,7 +27,6 @@ const FormInput = React.forwardRef<TextInput, FormInputProps>(
     const [isFocused, setIsFocused] = useState(false);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
-    // High Contrast Border Logic
     const borderColor = errorMessage
       ? "border-primary_scarlet-500"
       : isFocused
@@ -56,7 +55,6 @@ const FormInput = React.forwardRef<TextInput, FormInputProps>(
               setIsFocused(false);
               onBlur?.(e);
             }}
-            // pr-14 ensures text never overlaps the eye icon
             className={`flex-1 p-5 text-base font-bold text-slate-900 pr-14 ${propsClassName || ""}`}
             placeholderTextColor="#94a3b8"
             accessibilityLabel={label}
@@ -119,7 +117,6 @@ export default function LoginScreen() {
       className="flex-1 bg-papaya_whip-900"
       style={{ paddingBottom: insets.bottom }}
     >
-      {/* Premium cerulean header - matches Directory style */}
       <View
         className="bg-cerulean-600 rounded-b-[48px] px-8 pb-12 items-center"
         style={[{ paddingTop: insets.top + 24 }, platformShadow({ color: colors.cerulean[900], offsetY: 16, blur: 24, opacity: 0.35, elevation: 20 })]}
@@ -158,7 +155,6 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Form card - Directory-style white card */}
           <View
             className="bg-white rounded-[32px] p-6 mb-6"
             style={[platformShadow({ color: colors.cerulean[300], offsetY: 12, blur: 24, opacity: 0.12, elevation: 12 }), { borderWidth: 1, borderColor: colors.papaya_whip[800] }]}
@@ -200,7 +196,6 @@ export default function LoginScreen() {
             />
           </View>
 
-          {/* Sign In - yellow CTA matching NEW PATIENT FAB */}
           <TouchableOpacity
             onPress={handleLogin}
             disabled={isButtonDisabled}
@@ -233,7 +228,6 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </ScrollView>
 
-        {/* Staff portal - pinned to bottom, compact */}
         <View
           style={{
             paddingHorizontal: 24,

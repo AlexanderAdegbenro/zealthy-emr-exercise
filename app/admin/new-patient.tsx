@@ -17,13 +17,12 @@ interface Patient {
   email?: string;
 }
 
-// 1. Create a custom component for the row to handle its own animation state
+/** Row with highlight animation when it's the newly added patient (from new-patient flow). */
 const AnimatedPatientRow = ({ item, isNew, onPress }: { item: Patient, isNew: boolean, onPress: () => void }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (isNew) {
-      // Create a pulsing "blink" effect to grab the user's attention
       Animated.sequence([
         Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: false }),
         Animated.timing(fadeAnim, { toValue: 0, duration: 400, useNativeDriver: false }),
@@ -33,7 +32,6 @@ const AnimatedPatientRow = ({ item, isNew, onPress }: { item: Patient, isNew: bo
     }
   }, [isNew, fadeAnim]);
 
-  // Interpolate the animation value into a background color (White to Light Blue)
   const backgroundColor = fadeAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['transparent', colors.cerulean[100]] 
@@ -71,8 +69,6 @@ const AnimatedPatientRow = ({ item, isNew, onPress }: { item: Patient, isNew: bo
 export default function AdminDashboard() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  
-  // 2. Grab the newPatientId from the URL params if we just came from the creation screen
   const { newPatientId } = useLocalSearchParams();
 
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -98,13 +94,12 @@ export default function AdminDashboard() {
     fetchPatients();
   }, [fetchPatients]);
 
-  useEffect(() => { fetchPatients(); }, [fetchPatients]);
+  useEffect(() => { fetchPatients(); }, [fetchPatients, newPatientId]);
 
   return (
     <View className="flex-1 bg-papaya_whip-900">
       <Stack.Screen options={{ headerShown: false }} />
       
-      {/* COMMAND HEADER */}
       <View
         className="bg-cerulean-600 rounded-b-[48px] px-8 pb-10"
         style={[headerShadow, { paddingTop: insets.top + 20 }]}
@@ -133,7 +128,6 @@ export default function AdminDashboard() {
         </View>
       </View>
 
-      {/* PATIENT LIST */}
       {isLoading ? (
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color={colors.cerulean[600]} />
@@ -157,11 +151,10 @@ export default function AdminDashboard() {
             </View>
           ) : (
             patients.map((item) => (
-              // 3. Replace the old mapping logic with our new Animated component
-              <AnimatedPatientRow 
-                key={item.id} 
-                item={item} 
-                isNew={item.id === newPatientId} // Pass true if this is the new patient
+              <AnimatedPatientRow
+                key={item.id}
+                item={item}
+                isNew={item.id === newPatientId}
                 onPress={() => {
                   haptics.light();
                   router.push(`/admin/patient/${item.id}` as any);
@@ -172,7 +165,6 @@ export default function AdminDashboard() {
         </ScrollView>
       )}
 
-      {/* FAB: New Patient */}
       <TouchableOpacity
         onPress={() => {
           haptics.medium();

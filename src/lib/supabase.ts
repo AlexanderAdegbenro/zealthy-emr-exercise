@@ -9,12 +9,11 @@ import { zealthyAlert } from "@/src/utils/alerts";
 const supabaseUrl = ENV.SUPABASE_URL;
 const supabaseAnonKey = ENV.SUPABASE_ANON_KEY;
 
-// 1. Validate Environment on Boot (env.ts warns; we throw here to avoid invalid client)
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Missing Supabase Environment Variables.");
 }
 
-// SSR-safe storage: no window during Expo Router server render (web)
+/** No window during SSR (Expo Router web); use no-op storage so client init doesn't throw. */
 const storage: SupportedStorage =
   typeof window === "undefined"
     ? {
@@ -24,7 +23,6 @@ const storage: SupportedStorage =
       }
     : AsyncStorage;
 
-// 2. Initialize Client
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage,
@@ -43,7 +41,6 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
  */
 export const validateProjectIntegrity = async () => {
   try {
-    // Lightweight reachability check: can we run a query? (No .single() so 0 rows is OK.)
     const { error } = await supabase
       .from("profiles")
       .select("id")

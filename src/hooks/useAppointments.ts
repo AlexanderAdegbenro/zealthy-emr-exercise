@@ -42,7 +42,6 @@ export const useCreateAppointment = () => {
       return data;
     },
     onSuccess: (_, variables) => {
-      // Invalidate the appointments query for the specific patient
       queryClient.invalidateQueries({ 
         queryKey: ["appointments", variables.patient_id] 
       });

@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { createClient } from '@supabase/supabase-js'; // <-- NEW IMPORT
+import { createClient } from '@supabase/supabase-js';
 import type { Database } from "@/src/lib/database.types";
 import { supabase } from "@/src/lib/supabase";
 
@@ -7,7 +7,6 @@ type AppointmentRow = Database['public']['Tables']['appointments']['Insert'];
 type AppointmentUpdate = Database['public']['Tables']['appointments']['Update'];
 type PrescriptionInsert = Database['public']['Tables']['prescriptions']['Insert'];
 
-// Defining these here ensures your data layer remains predictable
 export interface PatientProfile {
   id: string;
   first_name: string | null;
@@ -53,19 +52,17 @@ export const adminService = {
    */
   async createPatient(data: CreatePatientInput): Promise<{ data: { id: string } | null; error: string | null }> {
     try {
-      // 1. Create a completely isolated Supabase client
       const registrationClient = createClient(
         process.env.EXPO_PUBLIC_SUPABASE_URL!,
         process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
         {
           auth: {
-            persistSession: false, // <-- This is the magic key that prevents the bug
+            persistSession: false,
             autoRefreshToken: false,
           }
         }
       );
 
-      // 2. Use the isolated client to sign up the new patient
       const { data: authData, error: authError } = await registrationClient.auth.signUp({
         email: data.email.trim(),
         password: data.password,
@@ -79,9 +76,6 @@ export const adminService = {
 
       if (authError) throw authError;
       if (!authData.user?.id) throw new Error('User creation failed');
-
-      // The Admin session remains perfectly intact because we used the registrationClient
-      // Profile is handled by the DB trigger on auth.users insert
 
       return { data: { id: authData.user.id }, error: null };
     } catch (err: any) {
@@ -100,7 +94,6 @@ export const adminService = {
       .order('last_name', { ascending: true });
   },
 
-  // NEW: Fetch available meds for the dropdown
   async getAvailableMedications() {
     return await supabase
       .from('medications')
@@ -179,8 +172,7 @@ export const adminService = {
   },
 
   /**
-   * PATIENT DRILL-DOWN: Fetches a single patient's full EMR history.
-   * Useful for the [id].tsx screen.
+   * Fetches a single patient's full EMR (profile + prescriptions with medication names).
    */
   async getPatientMedicalHistory(patientId: string) {
     if (!patientId) throw new Error("Missing Patient ID");

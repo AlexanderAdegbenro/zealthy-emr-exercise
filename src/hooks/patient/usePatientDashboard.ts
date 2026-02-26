@@ -6,7 +6,6 @@ import { Database } from "@/src/lib/database.types";
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 
-// Explicit types for the dashboard data
 export interface DashboardProfile {
   first_name: string | null;
   last_name: string | null;
@@ -36,7 +35,6 @@ export interface PatientDashboardData {
   prescriptions: DashboardPrescription[];
 }
 
-// Helper functions kept inside the hook file
 function upcomingInNext7Days(isoDate: string): boolean {
   const d = new Date(isoDate);
   const now = new Date();
@@ -59,7 +57,6 @@ export const usePatientDashboard = () => {
     queryFn: async () => {
       if (!user?.id) throw new Error("No authenticated user");
 
-      // We still use Promise.all for speed, but now React Query caches the result!
       const [profileRes, aptRes, rxRes] = await Promise.all([
         supabase.from("profiles").select("first_name, last_name, email").eq("id", user.id).single(),
         supabase.from("appointments").select("id, provider_name, first_appointment_date, status").eq("patient_id", user.id),
@@ -70,7 +67,6 @@ export const usePatientDashboard = () => {
       if (aptRes.error) throw aptRes.error;
       if (rxRes.error) throw rxRes.error;
 
-      // Transformation logic moved out of the UI
       const upcomingApts = (aptRes.data || [])
         .filter((a) => upcomingInNext7Days(a.first_appointment_date))
         .sort((a, b) => new Date(a.first_appointment_date).getTime() - new Date(b.first_appointment_date).getTime())
@@ -84,7 +80,7 @@ export const usePatientDashboard = () => {
         prescriptions: upcomingRx,
       };
     },
-    enabled: !!user?.id, // Only run the query if we have a user ID
+    enabled: !!user?.id,
   });
 
   return {
