@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, Animated } from "react-native";
-import { useRouter, Stack, useLocalSearchParams, Link } from "expo-router";
+import { useRouter, Stack, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { adminService } from "@/src/services/adminService";
@@ -168,7 +168,8 @@ export default function AdminDashboard() {
                   isNew={isNew}
                   onPress={() => {
                     haptics.light();
-                    router.push(`/admin/patient/${item.id}` as any);
+                    // Using an absolute path ensures the router doesn't get lost
+                    router.push(`/(admin)/patient/${item.id}` as any);
                   }}
                   onLayout={(event) => {
                     if (isNew) {
@@ -183,34 +184,38 @@ export default function AdminDashboard() {
         </ScrollView>
       )}
 
-      <Link href="/admin/new-patient" asChild>
-        <TouchableOpacity
-          activeOpacity={0.85}
-          accessibilityLabel="Add new patient"
-          accessibilityRole="button"
-          className="absolute flex-row items-center justify-center rounded-full"
-          style={[{
-            position: "absolute",
-            right: 24,
-            bottom: 24 + insets.bottom,
-            backgroundColor: colors.bright_amber[500],
-            borderRadius: 100,
-            paddingHorizontal: 20,
-            paddingVertical: 18,
-          }, fabShadow]}
-        >
-          <View className="flex-row items-center" style={{ minWidth: 140, justifyContent: "space-between" }}>
-            <Text
-              className="font-black uppercase tracking-wider"
-              style={{ color: colors.cerulean[500], fontSize: 12 }}
-              numberOfLines={1}
-            >
-              New Patient
-            </Text>
-            <Feather name="plus" size={18} color={colors.cerulean[500]} />
-          </View>
-        </TouchableOpacity>
-      </Link>
+      {/* FIX: Reverted to direct router.push with an unambiguous absolute path */}
+      <TouchableOpacity
+        onPress={() => {
+          haptics.medium();
+          // Ensure we are explicitly pushing to the admin group's new-patient screen
+          router.push("/(admin)/new-patient" as any);
+        }}
+        activeOpacity={0.85}
+        accessibilityLabel="Add new patient"
+        accessibilityRole="button"
+        className="absolute flex-row items-center justify-center rounded-full"
+        style={[{
+          position: "absolute",
+          right: 24,
+          bottom: 24 + insets.bottom,
+          backgroundColor: colors.bright_amber[500],
+          borderRadius: 100,
+          paddingHorizontal: 20,
+          paddingVertical: 18,
+        }, fabShadow]}
+      >
+        <View className="flex-row items-center" style={{ minWidth: 140, justifyContent: "space-between" }}>
+          <Text
+            className="font-black uppercase tracking-wider"
+            style={{ color: colors.cerulean[500], fontSize: 12 }}
+            numberOfLines={1}
+          >
+            New Patient
+          </Text>
+          <Feather name="plus" size={18} color={colors.cerulean[500]} />
+        </View>
+      </TouchableOpacity>
     </View>
   );
 }
