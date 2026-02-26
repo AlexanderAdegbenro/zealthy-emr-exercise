@@ -1,6 +1,4 @@
 import { ScrollViewStyleReset } from 'expo-router/html';
-import Feather from '@expo/vector-icons/Feather';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 export default function Root({ children }: { children: React.ReactNode }) {
   return (
@@ -10,10 +8,8 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
         <ScrollViewStyleReset />
-
-        {/* THIS forces the web to load the vector icons so they don't 404 on Netlify */}
-        <style type="text/css" dangerouslySetInnerHTML={{ __html: Feather.font }} />
-        <style type="text/css" dangerouslySetInnerHTML={{ __html: Ionicons.font }} />
+        {/* Icon fonts are loaded by useFonts(Ionicons.font, Feather.font) in app/_layout.tsx.
+            With expo-font plugin and web.output: "static", Expo embeds @font-face at build time. */}
       </head>
       <body>{children}</body>
     </html>
