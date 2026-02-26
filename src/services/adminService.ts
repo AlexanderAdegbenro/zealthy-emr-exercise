@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { createClient } from '@supabase/supabase-js'; // <-- NEW IMPORT
 import type { Database } from "@/src/lib/database.types";
 import { supabase } from "@/src/lib/supabase";
 
@@ -47,16 +48,25 @@ export interface CreatePatientInput {
 export const adminService = {
   
   /**
-   * PATIENTS: Creates a new patient (auth user + profile) via service-role API.
-   * Requires EXPO_PUBLIC_APP_URL (or same-origin on web) for API route.
+   * PATIENTS: Creates a new patient (auth user + profile).
+   * Uses a secondary client to prevent hijacking the Admin's active session.
    */
   async createPatient(data: CreatePatientInput): Promise<{ data: { id: string } | null; error: string | null }> {
     try {
-      // Snapshot admin session before signUp replaces it with the new patient's session
-      const { data: sessionData } = await supabase.auth.getSession();
-      const adminSession = sessionData?.session;
+      // 1. Create a completely isolated Supabase client
+      const registrationClient = createClient(
+        process.env.EXPO_PUBLIC_SUPABASE_URL!,
+        process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          auth: {
+            persistSession: false, // <-- This is the magic key that prevents the bug
+            autoRefreshToken: false,
+          }
+        }
+      );
 
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // 2. Use the isolated client to sign up the new patient
+      const { data: authData, error: authError } = await registrationClient.auth.signUp({
         email: data.email.trim(),
         password: data.password,
         options: {
@@ -67,17 +77,10 @@ export const adminService = {
         },
       });
 
-      // Restore admin session immediately — signUp swaps it to the new patient
-      if (adminSession) {
-        await supabase.auth.setSession({
-          access_token: adminSession.access_token,
-          refresh_token: adminSession.refresh_token,
-        });
-      }
-
       if (authError) throw authError;
       if (!authData.user?.id) throw new Error('User creation failed');
 
+      // The Admin session remains perfectly intact because we used the registrationClient
       // Profile is handled by the DB trigger on auth.users insert
 
       return { data: { id: authData.user.id }, error: null };
@@ -85,6 +88,7 @@ export const adminService = {
       return { data: null, error: err.message || 'An unexpected error occurred' };
     }
   },
+
   /**
    * PATIENTS: Fetches all registered profiles that are not administrators.
    */
@@ -95,13 +99,15 @@ export const adminService = {
       .eq('is_admin', false)
       .order('last_name', { ascending: true });
   },
-// NEW: Fetch available meds for the dropdown
+
+  // NEW: Fetch available meds for the dropdown
   async getAvailableMedications() {
     return await supabase
       .from('medications')
       .select('*')
       .order('name', { ascending: true });
   },
+
   /**
    * APPOINTMENTS: Logic for creating and managing patient visits.
    */
