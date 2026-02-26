@@ -168,13 +168,12 @@ export default function AdminDashboard() {
                   isNew={isNew}
                   onPress={() => {
                     haptics.light();
-                    // Using an absolute path ensures the router doesn't get lost
-                    router.push(`/(admin)/patient/${item.id}` as any);
+                    router.push(`/admin/patient/${item.id}` as any);
                   }}
                   onLayout={(event) => {
                     if (isNew) {
                       const { y } = event.nativeEvent.layout;
-                      scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 40), animated: true }); // 40px padding above card
+                      scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 40), animated: true });
                     }
                   }}
                 />
@@ -184,12 +183,10 @@ export default function AdminDashboard() {
         </ScrollView>
       )}
 
-      {/* FIX: Reverted to direct router.push with an unambiguous absolute path */}
       <TouchableOpacity
         onPress={() => {
           haptics.medium();
-          // Ensure we are explicitly pushing to the admin group's new-patient screen
-          router.push("/(admin)/new-patient" as any);
+          router.push("/admin/new-patient" as any);
         }}
         activeOpacity={0.85}
         accessibilityLabel="Add new patient"
