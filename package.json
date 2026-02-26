@@ -8,6 +8,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "build:web": "node scripts/prebuild-nativewind-web.js && expo export -p web",
     "lint": "expo lint",
     "report": "node ./scripts/codebase-assessment-report.js",
     "test": "vitest run"
