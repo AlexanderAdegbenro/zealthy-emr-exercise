@@ -185,7 +185,6 @@ export default function AdminDashboard() {
 
       <Link href="/admin/new-patient" asChild>
         <TouchableOpacity
-          onPress={() => haptics.medium()}
           activeOpacity={0.85}
           accessibilityLabel="Add new patient"
           accessibilityRole="button"
