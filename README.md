@@ -1,3 +1,10 @@
+
+
+<img width="1920" height="1440" alt="56shots_so" src="https://github.com/user-attachments/assets/f1063001-c733-4018-94ae-4f1532145278" />
+
+
+
+
 # Zealthy | High-Definition Patient Care Portal
 
 Zealthy is a high-performance EMR and Patient Portal designed to bridge the gap between complex medical data and a frictionless user experience. Built with a **Mobile-First** philosophy, it balances intuitive patient autonomy with a powerful, high-utility administrative suite. This project reflects an ongoing focus on React Native and iOS mobile development.
